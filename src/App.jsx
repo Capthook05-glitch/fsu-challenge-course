@@ -1,34 +1,24 @@
-import { useEffect, useState } from 'react';
-import { AuthForm } from './components/auth/AuthForm';
-import { AppShell } from './pages/AppShell';
-import { supabase } from './lib/supabase';
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext'; // Assuming you have an AuthContext for auth flow
+import Home from './components/Home'; // Home component
+import Login from './components/Login'; // Login component
+import Dashboard from './components/Dashboard'; // Auth protected Dashboard component
+import NotFound from './components/NotFound'; // 404 Not Found component
 
-export default function App() {
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
+const App = () => {
   return (
-    <div className="min-h-screen bg-fsu-navy p-4 sm:p-8">
-      {session ? (
-        <AppShell session={session} />
-      ) : (
-        <div className="mx-auto flex min-h-[85vh] max-w-5xl items-center justify-center">
-          <AuthForm />
-        </div>
-      )}
-    </div>
+    <AuthProvider>
+      <Router>
+        <Switch>
+          <Route path='/' exact component={Home} />
+          <Route path='/login' component={Login} />
+          <Route path='/dashboard' component={Dashboard} />
+          <Route component={NotFound} />
+        </Switch>
+      </Router>
+    </AuthProvider>
   );
-}
+};
+
+export default App;
