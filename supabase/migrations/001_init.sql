@@ -63,6 +63,26 @@ create table if not exists public.session_feedback (
   submitted_at timestamptz not null default now()
 );
 
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_games_updated_at on public.games;
+create trigger set_games_updated_at
+before update on public.games
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_sessions_updated_at on public.sessions;
+create trigger set_sessions_updated_at
+before update on public.sessions
+for each row execute function public.set_updated_at();
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -101,6 +121,21 @@ alter table public.sessions enable row level security;
 alter table public.session_games enable row level security;
 alter table public.session_feedback enable row level security;
 
+drop policy if exists "Users can read own profile" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+drop policy if exists "Anyone authenticated can view active games" on public.games;
+drop policy if exists "Only admins can insert games" on public.games;
+drop policy if exists "Only admins can update games" on public.games;
+drop policy if exists "Only admins can delete games" on public.games;
+drop policy if exists "Users can read own sessions" on public.sessions;
+drop policy if exists "Users can create own sessions" on public.sessions;
+drop policy if exists "Users can update own sessions" on public.sessions;
+drop policy if exists "Users can delete own sessions" on public.sessions;
+drop policy if exists "Read session games for authorized sessions" on public.session_games;
+drop policy if exists "Write session games for authorized sessions" on public.session_games;
+drop policy if exists "Public can insert feedback" on public.session_feedback;
+drop policy if exists "Only owner/admin can read feedback" on public.session_feedback;
+
 -- profiles policies
 create policy "Users can read own profile" on public.profiles
 for select using (auth.uid() = id or public.is_admin());
@@ -111,6 +146,7 @@ with check (auth.uid() = id or public.is_admin());
 
 -- games policies
 create policy "Anyone authenticated can view active games" on public.games
+for select using ((is_active = true and auth.role() = 'authenticated') or public.is_admin());
 for select using (auth.role() = 'authenticated');
 
 create policy "Only admins can insert games" on public.games
