@@ -101,6 +101,35 @@ It checks:
 
 ---
 
+
+## Troubleshooting launch issues
+
+If the app does not launch, check these first:
+
+1. **Missing `.env.example` / `.env`**
+   - Ensure `.env.example` exists in repo root.
+   - Run:
+     ```bash
+     cp .env.example .env
+     npm run setup:check
+     ```
+
+2. **Blank page with env error**
+   - The app now shows an in-browser warning when Supabase env vars are missing.
+   - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to `.env`.
+
+3. **Auth works but profile fails to load**
+   - Run SQL from `supabase/migrations/001_init.sql` in Supabase SQL editor.
+
+4. **`npm install` fails with registry/proxy errors**
+   - Check local network/proxy config and npm registry access:
+     ```bash
+     npm config get registry
+     npm ping
+     ```
+
+---
+
 ## 7) Next build order (recommended)
 
 1. Catalog page (search, filters, list/grid)

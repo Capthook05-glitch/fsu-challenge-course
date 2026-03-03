@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getSupabaseClient } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
 
 export function AppShell({ session }) {
@@ -7,6 +8,7 @@ export function AppShell({ session }) {
 
   useEffect(() => {
     const loadProfile = async () => {
+      const supabase = getSupabaseClient();
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('name, role, email')
@@ -25,6 +27,7 @@ export function AppShell({ session }) {
   }, [session.user.id]);
 
   const signOut = async () => {
+    const supabase = getSupabaseClient();
     await supabase.auth.signOut();
   };
 
