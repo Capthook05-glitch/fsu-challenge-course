@@ -1,105 +1,80 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
 
-const statusColor = {
-  draft:     { color: '#7a90b0' },
-  ready:     { color: '#CEB069' },
-  completed: { color: '#3ecf8e' },
-};
+const supabase = getSupabaseClient();
 
-export function Dashboard() {
+export default function Dashboard() {
   const { profile } = useProfile();
   const [stats, setStats] = useState({ sessions: 0, games: 0 });
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
-    if (!profile) return;
-    const supabase = getSupabaseClient();
+    async function load() {
+      const [{ count: sessCount }, { count: gameCount }, { data: recentSess }] = await Promise.all([
+        supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('is_archived', false),
+        supabase.from('games').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('sessions').select('id,name,status,updated_at').eq('is_archived', false)
+          .order('updated_at', { ascending: false }).limit(3),
+      ]);
+      setStats({ sessions: sessCount || 0, games: gameCount || 0 });
+      setRecent(recentSess || []);
+    }
+    load();
+  }, []);
 
-    supabase
-      .from('sessions')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_id', profile.id)
-      .eq('is_archived', false)
-      .then(({ count }) => setStats((s) => ({ ...s, sessions: count ?? 0 })));
-
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_active', true)
-      .then(({ count }) => setStats((s) => ({ ...s, games: count ?? 0 })));
-
-    supabase
-      .from('sessions')
-      .select('id, name, status, updated_at')
-      .eq('owner_id', profile.id)
-      .eq('is_archived', false)
-      .order('updated_at', { ascending: false })
-      .limit(3)
-      .then(({ data }) => setRecent(data ?? []));
-  }, [profile]);
+  const statusStyle = { draft: '#78716C', ready: '#16a34a', completed: '#2563eb', archived: '#A8A29E' };
 
   return (
-    <div className="space-y-8">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-bold text-fsu-gold" style={{ fontFamily: 'Syne' }}>
-          Welcome back{profile?.name ? `, ${profile.name}` : ''}
+    <div className="p-6 max-w-4xl">
+      <div className="mb-7">
+        <h1 className="font-syne font-bold text-3xl text-fsu-text mb-1">
+          Welcome back{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
         </h1>
-        <p className="mt-1 text-sm text-fsu-muted">What are you facilitating today?</p>
+        <p className="text-fsu-muted">FSU Challenge Course Facilitator Toolkit</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint">Active Sessions</p>
-          <p className="mt-2 text-4xl font-bold text-white" style={{ fontFamily: 'Syne' }}>{stats.sessions}</p>
+      <div className="grid grid-cols-2 gap-4 mb-7">
+        <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
+          <p className="text-xs text-fsu-muted font-medium uppercase tracking-wide mb-1">Active Sessions</p>
+          <p className="font-syne font-bold text-4xl text-fsu-garnet">{stats.sessions}</p>
         </div>
-        <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint">Games Available</p>
-          <p className="mt-2 text-4xl font-bold text-white" style={{ fontFamily: 'Syne' }}>{stats.games}</p>
+        <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
+          <p className="text-xs text-fsu-muted font-medium uppercase tracking-wide mb-1">Activities</p>
+          <p className="font-syne font-bold text-4xl text-fsu-garnet">{stats.games}</p>
         </div>
       </div>
 
       {/* Quick actions */}
-      <div className="flex flex-wrap gap-3">
-        <Link
-          to="/games"
-          className="rounded-xl px-6 py-3 font-bold text-white hover:brightness-110 transition-all"
-          style={{ background: 'linear-gradient(135deg, #782F40, #9e3a4d)', fontFamily: 'Syne' }}
-        >
-          🗂 Browse Catalog
+      <div className="flex flex-wrap gap-3 mb-8">
+        <Link to="/sessions"
+          className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+          + New Session
         </Link>
-        <Link
-          to="/sessions"
-          className="rounded-xl px-6 py-3 font-semibold transition-all"
-          style={{ background: '#162035', color: '#e8edf5', border: '1px solid #1e2d45' }}
-        >
-          📋 New Session
+        <Link to="/games"
+          className="bg-fsu-surface border border-fsu-border2 hover:border-fsu-garnet text-fsu-text px-5 py-2.5 rounded-xl text-sm font-medium transition-colors">
+          Browse Activities
         </Link>
       </div>
 
       {/* Recent sessions */}
       {recent.length > 0 && (
         <div>
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-fsu-faint">Recent Sessions</h2>
+          <h2 className="font-syne font-semibold text-fsu-text text-base mb-3">Recent Sessions</h2>
           <div className="space-y-2">
-            {recent.map((s) => (
-              <Link
-                key={s.id}
-                to={`/sessions/${s.id}`}
-                className="flex items-center justify-between rounded-xl border border-fsu-border bg-fsu-bg2 px-4 py-3 hover:border-fsu-border2 transition-colors"
-              >
-                <span className="text-white font-medium">{s.name}</span>
-                <span className="text-xs capitalize" style={statusColor[s.status] ?? { color: '#7a90b0' }}>{s.status}</span>
+            {recent.map(s => (
+              <Link key={s.id} to={`/sessions/${s.id}`}
+                className="flex items-center justify-between p-4 bg-fsu-surface border border-fsu-border rounded-xl hover:border-fsu-garnet hover:shadow-sm transition-all">
+                <span className="font-medium text-sm text-fsu-text">{s.name}</span>
+                <span className="text-xs font-semibold capitalize px-2.5 py-1 rounded-full"
+                  style={{ background: (statusStyle[s.status] || '#78716C') + '18', color: statusStyle[s.status] || '#78716C' }}>
+                  {s.status}
+                </span>
               </Link>
             ))}
           </div>
-          <Link to="/sessions" className="mt-3 block text-sm text-fsu-muted hover:text-fsu-gold transition-colors">
-            View all sessions →
-          </Link>
         </div>
       )}
     </div>

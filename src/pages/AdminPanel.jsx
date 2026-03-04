@@ -1,286 +1,252 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useProfile } from '../context/ProfileContext';
+import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '../lib/supabase';
-import { Badge } from '../components/ui/Badge';
+import { GoalTag } from '../components/ui/GoalTag';
+import { GOAL_KEYS } from '../lib/goalMeta';
 import { Modal } from '../components/ui/Modal';
 
-const EMPTY_GAME = {
-  name: '', description: '', goals: '', min_group: 2, max_group: 20,
-  min_age: '', max_age: '', time_min: 5, time_max: 20, activity_level: 'medium',
-  setting: [], facilitation: '', materials: '', tags: '', is_active: true,
+const supabase = getSupabaseClient();
+
+const BLANK = {
+  name: '', description: '', goals: [], min_group: 5, max_group: 20,
+  time_min: 10, time_max: 30, activity_level: 'medium', setting: [],
+  facilitation: '', materials: '', tags: [], is_active: true,
+  physical_intensity: '', psychological_intensity: '', safety_notes: '',
+  learning_objectives: '',
 };
 
-export function AdminPanel() {
-  const { profile, isAdmin, loading } = useProfile();
-  const navigate = useNavigate();
-  const [tab, setTab] = useState('games');
-  const [games, setGames] = useState([]);
-  const [allSessions, setAllSessions] = useState([]);
-  const [gamesLoading, setGamesLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editGame, setEditGame] = useState(null);
-  const [form, setForm] = useState(EMPTY_GAME);
-  const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
-
-  useEffect(() => {
-    if (!loading && !isAdmin) navigate('/');
-  }, [isAdmin, loading, navigate]);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    loadGames();
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (tab === 'sessions' && allSessions.length === 0) loadAllSessions();
-  }, [tab]);
+export default function AdminPanel() {
+  const [games, setGames]     = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm]       = useState(BLANK);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab]         = useState('games');
 
   async function loadGames() {
-    const supabase = getSupabaseClient();
     const { data } = await supabase.from('games').select('*').order('name');
-    setGames(data ?? []);
-    setGamesLoading(false);
+    setGames(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { loadGames(); }, []);
+
+  function openNew() { setEditing('new'); setForm(BLANK); }
+  function openEdit(g) {
+    setEditing(g.id);
+    setForm({ ...g, learning_objectives: (g.learning_objectives || []).join(', '), setting: g.setting || [] });
   }
 
-  async function loadAllSessions() {
-    const supabase = getSupabaseClient();
-    const { data } = await supabase
-      .from('sessions')
-      .select('id, name, status, created_at, profiles!owner_id(name, email)')
-      .order('created_at', { ascending: false });
-    setAllSessions(data ?? []);
-  }
-
-  function openNew() {
-    setEditGame(null);
-    setForm(EMPTY_GAME);
-    setShowForm(true);
-  }
-
-  function openEdit(game) {
-    setEditGame(game);
-    setForm({
-      ...game,
-      goals: game.goals?.join(', ') ?? '',
-      setting: game.setting ?? [],
-      tags: game.tags?.join(', ') ?? '',
-      min_age: game.min_age ?? '',
-      max_age: game.max_age ?? '',
-    });
-    setShowForm(true);
-  }
-
-  async function saveGame(e) {
-    e.preventDefault();
-    setSaving(true);
-    const supabase = getSupabaseClient();
+  async function saveGame() {
     const payload = {
       ...form,
-      goals: form.goals ? form.goals.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      tags: form.tags ? form.tags.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      min_age: form.min_age ? Number(form.min_age) : null,
-      max_age: form.max_age ? Number(form.max_age) : null,
-      min_group: Number(form.min_group),
-      max_group: Number(form.max_group),
-      time_min: Number(form.time_min),
-      time_max: Number(form.time_max),
+      goals: Array.isArray(form.goals) ? form.goals : [],
+      setting: Array.isArray(form.setting) ? form.setting : [],
+      learning_objectives: form.learning_objectives
+        ? form.learning_objectives.split(',').map(s => s.trim()).filter(Boolean)
+        : [],
+      physical_intensity: form.physical_intensity ? parseInt(form.physical_intensity) : null,
+      psychological_intensity: form.psychological_intensity ? parseInt(form.psychological_intensity) : null,
     };
-    delete payload.id; delete payload.created_at; delete payload.updated_at; delete payload.created_by;
-
-    if (editGame) {
-      await supabase.from('games').update(payload).eq('id', editGame.id);
+    if (editing === 'new') {
+      await supabase.from('games').insert(payload);
     } else {
-      await supabase.from('games').insert({ ...payload, created_by: profile.id });
+      await supabase.from('games').update(payload).eq('id', editing);
     }
-    setSaving(false);
-    setShowForm(false);
-    loadGames();
-  }
-
-  async function toggleActive(game) {
-    const supabase = getSupabaseClient();
-    await supabase.from('games').update({ is_active: !game.is_active }).eq('id', game.id);
+    setEditing(null);
     loadGames();
   }
 
   async function deleteGame(id) {
-    const supabase = getSupabaseClient();
+    if (!confirm('Delete this activity?')) return;
     await supabase.from('games').delete().eq('id', id);
-    setGames((prev) => prev.filter((g) => g.id !== id));
-    setConfirmDelete(null);
+    loadGames();
   }
 
-  const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const toggleSetting = (s) => setForm((f) => ({
-    ...f, setting: f.setting.includes(s) ? f.setting.filter((x) => x !== s) : [...f.setting, s],
-  }));
-
-  if (loading) return <p className="text-slate-400">Loading…</p>;
-  if (!isAdmin) return null;
-
-  const fmt = (ts) => new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  function toggleGoal(g) {
+    setForm(f => ({ ...f, goals: f.goals.includes(g) ? f.goals.filter(x => x !== g) : [...f.goals, g] }));
+  }
+  function toggleSetting(s) {
+    setForm(f => ({ ...f, setting: f.setting.includes(s) ? f.setting.filter(x => x !== s) : [...f.setting, s] }));
+  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-fsu-gold">Admin Panel</h1>
+    <div className="p-6 max-w-4xl">
+      <h1 className="font-syne font-bold text-2xl text-fsu-text mb-6">Admin Panel</h1>
 
-      <div className="flex gap-1 border-b border-slate-700">
-        {['games', 'sessions'].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm capitalize transition-colors ${tab === t ? 'border-b-2 border-fsu-gold text-fsu-gold' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            {t}
-          </button>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-fsu-soft rounded-xl p-1 w-fit">
+        {['games','sessions'].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+              tab === t ? 'bg-fsu-surface text-fsu-garnet shadow-sm border border-fsu-border' : 'text-fsu-muted hover:text-fsu-text'
+            }`}>{t}</button>
         ))}
       </div>
 
       {tab === 'games' && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <button onClick={openNew} className="rounded-md bg-fsu-garnet px-4 py-2 text-sm font-medium hover:brightness-110">
-              + Add Game
+        <>
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-fsu-muted">{games.length} activities</p>
+            <button onClick={openNew}
+              className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+              + Add Activity
             </button>
           </div>
-          {gamesLoading ? <p className="text-slate-400">Loading…</p> : (
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
-              <table className="w-full text-sm">
-                <thead className="border-b border-slate-700 bg-slate-900/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Name</th>
-                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Level</th>
-                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Status</th>
-                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {games.map((g) => (
-                    <tr key={g.id} className="hover:bg-slate-900/30">
-                      <td className="px-4 py-3 text-slate-100">{g.name}</td>
-                      <td className="px-4 py-3"><Badge variant={g.activity_level} label={g.activity_level} /></td>
-                      <td className="px-4 py-3">
-                        <span className={g.is_active ? 'text-green-400 text-xs' : 'text-slate-500 text-xs'}>
-                          {g.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-3">
-                          <button onClick={() => openEdit(g)} className="text-xs text-slate-400 hover:text-slate-100">Edit</button>
-                          <button onClick={() => toggleActive(g)} className="text-xs text-slate-400 hover:text-slate-100">
-                            {g.is_active ? 'Deactivate' : 'Activate'}
-                          </button>
-                          <button onClick={() => setConfirmDelete(g)} className="text-xs text-red-700 hover:text-red-400">Delete</button>
-                        </div>
-                      </td>
-                    </tr>
+
+          {loading && <p className="text-fsu-muted text-sm">Loading...</p>}
+
+          <div className="space-y-2">
+            {games.map(g => (
+              <div key={g.id} className="flex items-center justify-between p-4 bg-fsu-surface border border-fsu-border rounded-xl hover:border-fsu-border2 transition-colors">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${g.is_active ? 'bg-green-500' : 'bg-fsu-faint'}`} />
+                  <div className="min-w-0">
+                    <p className="font-medium text-fsu-text text-sm truncate">{g.name}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {g.goals?.slice(0,3).map(gl => <GoalTag key={gl} goal={gl} />)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-shrink-0 ml-3">
+                  <button onClick={() => openEdit(g)} className="text-xs border border-fsu-border text-fsu-muted hover:text-fsu-garnet hover:border-fsu-garnet px-3 py-1.5 rounded-lg transition-colors">Edit</button>
+                  <button onClick={() => deleteGame(g.id)} className="text-xs border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {editing && (
+        <Modal onClose={() => setEditing(null)}>
+          <div className="p-6 max-w-xl w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="font-syne font-bold text-lg text-fsu-text mb-5">
+              {editing === 'new' ? 'New Activity' : 'Edit Activity'}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Name *</label>
+                <input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                  className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Description</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                  rows={3} className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Min Group</label>
+                  <input type="number" value={form.min_group} onChange={e => setForm(f => ({...f, min_group: +e.target.value}))}
+                    className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Max Group</label>
+                  <input type="number" value={form.max_group} onChange={e => setForm(f => ({...f, max_group: +e.target.value}))}
+                    className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Time Min (min)</label>
+                  <input type="number" value={form.time_min} onChange={e => setForm(f => ({...f, time_min: +e.target.value}))}
+                    className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Time Max (min)</label>
+                  <input type="number" value={form.time_max} onChange={e => setForm(f => ({...f, time_max: +e.target.value}))}
+                    className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Activity Level</label>
+                <select value={form.activity_level} onChange={e => setForm(f => ({...f, activity_level: e.target.value}))}
+                  className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text bg-fsu-surface">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              {/* Intensity */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Physical Intensity (1-5)</label>
+                  <select value={form.physical_intensity} onChange={e => setForm(f => ({...f, physical_intensity: e.target.value}))}
+                    className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text bg-fsu-surface">
+                    <option value="">—</option>
+                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Psych Intensity (1-5)</label>
+                  <select value={form.psychological_intensity} onChange={e => setForm(f => ({...f, psychological_intensity: e.target.value}))}
+                    className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text bg-fsu-surface">
+                    <option value="">—</option>
+                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+              </div>
+              {/* Setting */}
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1.5 block">Setting</label>
+                <div className="flex gap-2">
+                  {['indoor','outdoor'].map(s => (
+                    <button key={s} type="button" onClick={() => toggleSetting(s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border capitalize transition-colors ${
+                        form.setting.includes(s) ? 'bg-fsu-garnet text-white border-fsu-garnet' : 'border-fsu-border text-fsu-muted'
+                      }`}>{s}</button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+              {/* Goals */}
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1.5 block">Goals</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {GOAL_KEYS.map(k => (
+                    <button key={k} type="button" onClick={() => toggleGoal(k)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
+                        form.goals.includes(k) ? 'bg-fsu-garnet text-white border-fsu-garnet' : 'border-fsu-border text-fsu-muted'
+                      }`}>{k}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Facilitation Notes</label>
+                <textarea value={form.facilitation} onChange={e => setForm(f => ({...f, facilitation: e.target.value}))}
+                  rows={3} className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Materials</label>
+                <input value={form.materials} onChange={e => setForm(f => ({...f, materials: e.target.value}))}
+                  className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Safety Notes</label>
+                <textarea value={form.safety_notes} onChange={e => setForm(f => ({...f, safety_notes: e.target.value}))}
+                  rows={2} className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400 text-red-700 resize-none placeholder:text-red-300"
+                  placeholder="Any safety considerations..." />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Learning Objectives (comma-separated)</label>
+                <input value={form.learning_objectives} onChange={e => setForm(f => ({...f, learning_objectives: e.target.value}))}
+                  placeholder="e.g. Trust, Communication, Problem-solving"
+                  className="w-full border border-fsu-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="isActive" checked={form.is_active}
+                  onChange={e => setForm(f => ({...f, is_active: e.target.checked}))} />
+                <label htmlFor="isActive" className="text-sm text-fsu-text">Active (visible in library)</label>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={saveGame}
+                  className="flex-1 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors">
+                  Save Activity
+                </button>
+                <button onClick={() => setEditing(null)}
+                  className="border border-fsu-border2 text-fsu-muted hover:text-fsu-text px-4 py-2.5 rounded-xl text-sm transition-colors">
+                  Cancel
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'sessions' && (
-        <div className="overflow-x-auto rounded-xl border border-slate-700">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-700 bg-slate-900/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Session</th>
-                <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Facilitator</th>
-                <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Created</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {allSessions.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-900/30">
-                  <td className="px-4 py-3 text-slate-100">{s.name}</td>
-                  <td className="px-4 py-3 text-slate-400">{s.profiles?.name || s.profiles?.email || '—'}</td>
-                  <td className="px-4 py-3"><Badge variant={s.status} label={s.status} /></td>
-                  <td className="px-4 py-3 text-slate-500">{fmt(s.created_at)}</td>
-                </tr>
-              ))}
-              {allSessions.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-500">No sessions yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Game form modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title={editGame ? 'Edit Game' : 'Add Game'} wide>
-        <form onSubmit={saveGame} className="space-y-4 text-sm">
-          <Field label="Name *"><input required value={form.name} onChange={(e) => setField('name', e.target.value)} className={inputCls} /></Field>
-          <Field label="Description *"><textarea required value={form.description} onChange={(e) => setField('description', e.target.value)} rows={3} className={`${inputCls} resize-none`} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Min Group"><input type="number" min="1" value={form.min_group} onChange={(e) => setField('min_group', e.target.value)} className={inputCls} /></Field>
-            <Field label="Max Group"><input type="number" min="1" value={form.max_group} onChange={(e) => setField('max_group', e.target.value)} className={inputCls} /></Field>
-            <Field label="Min Time (min)"><input type="number" min="1" value={form.time_min} onChange={(e) => setField('time_min', e.target.value)} className={inputCls} /></Field>
-            <Field label="Max Time (min)"><input type="number" min="1" value={form.time_max} onChange={(e) => setField('time_max', e.target.value)} className={inputCls} /></Field>
-            <Field label="Min Age"><input type="number" min="1" value={form.min_age} onChange={(e) => setField('min_age', e.target.value)} placeholder="optional" className={inputCls} /></Field>
-            <Field label="Max Age"><input type="number" min="1" value={form.max_age} onChange={(e) => setField('max_age', e.target.value)} placeholder="optional" className={inputCls} /></Field>
           </div>
-          <Field label="Activity Level">
-            <select value={form.activity_level} onChange={(e) => setField('activity_level', e.target.value)} className={inputCls}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </Field>
-          <Field label="Setting">
-            <div className="flex gap-3">
-              {['indoor', 'outdoor'].map((s) => (
-                <label key={s} className="flex items-center gap-1.5 text-slate-300 capitalize cursor-pointer">
-                  <input type="checkbox" checked={form.setting.includes(s)} onChange={() => toggleSetting(s)} className="accent-fsu-garnet" />
-                  {s}
-                </label>
-              ))}
-            </div>
-          </Field>
-          <Field label="Goals (comma-separated)"><input value={form.goals} onChange={(e) => setField('goals', e.target.value)} placeholder="communication, trust, teamwork" className={inputCls} /></Field>
-          <Field label="Tags (comma-separated)"><input value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="icebreaker, energizer" className={inputCls} /></Field>
-          <Field label="Materials"><input value={form.materials} onChange={(e) => setField('materials', e.target.value)} placeholder="e.g. None / 1 rope / blindfolds" className={inputCls} /></Field>
-          <Field label="Facilitation Tips"><textarea value={form.facilitation} onChange={(e) => setField('facilitation', e.target.value)} rows={4} className={`${inputCls} resize-none`} /></Field>
-          {editGame && (
-            <Field label="Active">
-              <label className="flex items-center gap-2 cursor-pointer text-slate-300">
-                <input type="checkbox" checked={form.is_active} onChange={(e) => setField('is_active', e.target.checked)} className="accent-fsu-garnet" />
-                Visible in catalog
-              </label>
-            </Field>
-          )}
-          <button type="submit" disabled={saving} className="w-full rounded-md bg-fsu-garnet px-4 py-2 font-medium hover:brightness-110 disabled:opacity-50">
-            {saving ? 'Saving…' : editGame ? 'Save Changes' : 'Add Game'}
-          </button>
-        </form>
-      </Modal>
-
-      {/* Delete confirm */}
-      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete Game">
-        <div className="space-y-4">
-          <p className="text-slate-300">Delete <strong>{confirmDelete?.name}</strong>? This cannot be undone.</p>
-          <div className="flex gap-3">
-            <button onClick={() => deleteGame(confirmDelete.id)} className="flex-1 rounded-md bg-red-800 py-2 text-sm font-medium hover:bg-red-700">Delete</button>
-            <button onClick={() => setConfirmDelete(null)} className="flex-1 rounded-md bg-slate-700 py-2 text-sm hover:bg-slate-600">Cancel</button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-}
-
-const inputCls = 'w-full rounded-md bg-slate-800 px-3 py-2 text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-fsu-gold/50';
-
-function Field({ label, children }) {
-  return (
-    <div>
-      <label className="block text-xs uppercase text-slate-500 mb-1">{label}</label>
-      {children}
+        </Modal>
+      )}
     </div>
   );
 }
