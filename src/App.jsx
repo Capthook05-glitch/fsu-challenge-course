@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthForm } from './components/auth/AuthForm';
+import { RequireRole } from './components/auth/RequireRole';
 import AppShell from './pages/AppShell';
 import Dashboard from './pages/Dashboard';
 import GameCatalog from './pages/GameCatalog';
@@ -14,6 +15,9 @@ import SiteProfiles from './pages/SiteProfiles';
 import { ProfileProvider } from './context/ProfileContext';
 import { getSupabaseClient, missingSupabaseEnv } from './lib/supabase';
 
+const PLANNERS  = ['admin', 'lead_facilitator'];
+const ALL_ROLES = ['admin', 'lead_facilitator', 'assistant_facilitator'];
+
 function AuthGate({ session }) {
   if (!session) {
     return (
@@ -26,14 +30,31 @@ function AuthGate({ session }) {
     <ProfileProvider session={session}>
       <Routes>
         <Route path="/" element={<AppShell />}>
+          {/* All authenticated roles */}
           <Route index element={<Dashboard />} />
           <Route path="games" element={<GameCatalog />} />
-          <Route path="sessions" element={<SessionList />} />
+
+          {/* Session detail — all roles can view; read-only enforced inside component */}
           <Route path="sessions/:id" element={<TimelinePlanner />} />
-          <Route path="groups" element={<GroupProfiles />} />
-          <Route path="sites" element={<SiteProfiles />} />
-          <Route path="admin" element={<AdminPanel />} />
+
+          {/* Planners only (admin + lead_facilitator) */}
+          <Route path="sessions" element={
+            <RequireRole roles={PLANNERS}><SessionList /></RequireRole>
+          } />
+          <Route path="groups" element={
+            <RequireRole roles={PLANNERS}><GroupProfiles /></RequireRole>
+          } />
+          <Route path="sites" element={
+            <RequireRole roles={PLANNERS}><SiteProfiles /></RequireRole>
+          } />
+
+          {/* Admin only */}
+          <Route path="admin" element={
+            <RequireRole roles={['admin']}><AdminPanel /></RequireRole>
+          } />
         </Route>
+
+        {/* Outside shell */}
         <Route path="/sessions/:id/facilitate" element={<FacilitationMode />} />
       </Routes>
     </ProfileProvider>
@@ -45,14 +66,9 @@ export default function App() {
 
   useEffect(() => {
     if (missingSupabaseEnv) return undefined;
-
     const supabase = getSupabaseClient();
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session ?? null));
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession ?? null);
-    });
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s ?? null));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -62,21 +78,15 @@ export default function App() {
         <div className="w-full rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
           <h1 className="text-2xl font-semibold">Missing Supabase environment variables</h1>
           <p className="mt-2 text-sm">
-            Copy <code>.env.example</code> to <code>.env</code>, then set <code>VITE_SUPABASE_URL</code> and{' '}
-            <code>VITE_SUPABASE_ANON_KEY</code>.
+            Copy <code>.env.example</code> to <code>.env</code>, then set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
           </p>
-          <pre className="mt-4 overflow-x-auto rounded bg-amber-100 p-3 text-xs">{`cp .env.example .env\nnpm run setup:check\nnpm run dev`}</pre>
         </div>
       </div>
     );
   }
 
   if (session === undefined) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-fsu-white text-fsu-muted">
-        Loading…
-      </div>
-    );
+    return <div className="flex min-h-screen items-center justify-center bg-fsu-white text-fsu-muted">Loading…</div>;
   }
 
   return (
