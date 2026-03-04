@@ -7,9 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "setup:check": "node scripts/setup-check.mjs",
-    "dev:host": "vite --host",
-    "deploy:vercel": "vercel --prod"
+    "setup:check": "node scripts/setup-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

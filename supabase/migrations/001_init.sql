@@ -63,49 +63,6 @@ create table if not exists public.session_feedback (
   submitted_at timestamptz not null default now()
 );
 
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint
-    where conname = 'games_name_key'
-      and conrelid = 'public.games'::regclass
-  ) then
-    alter table public.games
-      add constraint games_name_key unique (name);
-  end if;
-
-  if not exists (
-    select 1 from pg_constraint
-    where conname = 'games_group_range_check'
-      and conrelid = 'public.games'::regclass
-  ) then
-    alter table public.games
-      add constraint games_group_range_check check (min_group <= max_group);
-  end if;
-
-  if not exists (
-    select 1 from pg_constraint
-    where conname = 'games_time_range_check'
-      and conrelid = 'public.games'::regclass
-  ) then
-    alter table public.games
-      add constraint games_time_range_check check (time_min <= time_max);
-  end if;
-
-  if not exists (
-    select 1 from pg_constraint
-    where conname = 'games_age_range_check'
-      and conrelid = 'public.games'::regclass
-  ) then
-    alter table public.games
-      add constraint games_age_range_check check (
-        min_age is null or max_age is null or min_age <= max_age
-      );
-  end if;
-end;
-$$;
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -190,6 +147,7 @@ with check (auth.uid() = id or public.is_admin());
 -- games policies
 create policy "Anyone authenticated can view active games" on public.games
 for select using ((is_active = true and auth.role() = 'authenticated') or public.is_admin());
+for select using (auth.role() = 'authenticated');
 
 create policy "Only admins can insert games" on public.games
 for insert with check (public.is_admin());
@@ -269,19 +227,4 @@ values
 ('Warp Speed', 'Group lowers total passing time of an object.', '{problem-solving,communication,energizer}', 8, 40, 8, 99, 10, 20, 'low', '{indoor,outdoor}', 'Track attempts and highlight strategy shifts.', 'small ball', '{energizer}', true),
 ('Two Truths and a Lie', 'Icebreaker to learn about each participant.', '{community-building,communication}', 4, 25, 8, 99, 10, 20, 'low', '{indoor,outdoor}', 'Use as opener and debrief assumptions.', 'none', '{icebreaker}', true),
 ('Spider Web', 'Team passes members through rope web openings.', '{problem-solving,trust,communication,leadership}', 8, 20, 12, 99, 20, 45, 'high', '{outdoor}', 'Enforce one-use openings and spotting roles.', 'rope web', '{challenge}', true)
-on conflict (name) do update set
-  description = excluded.description,
-  goals = excluded.goals,
-  min_group = excluded.min_group,
-  max_group = excluded.max_group,
-  min_age = excluded.min_age,
-  max_age = excluded.max_age,
-  time_min = excluded.time_min,
-  time_max = excluded.time_max,
-  activity_level = excluded.activity_level,
-  setting = excluded.setting,
-  facilitation = excluded.facilitation,
-  materials = excluded.materials,
-  tags = excluded.tags,
-  is_active = excluded.is_active,
-  updated_at = now();
+on conflict do nothing;

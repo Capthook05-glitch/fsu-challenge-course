@@ -102,41 +102,6 @@ It checks:
 ---
 
 
-
-## Access URLs (local + live)
-
-You will have **two URLs**:
-
-1. **Local URL (development):**
-   - `http://localhost:5173`
-   - Run:
-     ```bash
-     npm install
-     cp .env.example .env
-     npm run setup:check
-     npm run dev
-     ```
-
-2. **Live URL (public internet via Vercel):**
-   - `https://<your-project-name>.vercel.app`
-   - One-time setup:
-     ```bash
-     npm i -g vercel
-     vercel login
-     vercel
-     ```
-   - Then add env vars in Vercel Project Settings:
-     - `VITE_SUPABASE_URL`
-     - `VITE_SUPABASE_ANON_KEY`
-   - Deploy production:
-     ```bash
-     npm run deploy:vercel
-     ```
-
-After deploy, Vercel prints your live URL in terminal and dashboard.
-
----
-
 ## Troubleshooting launch issues
 
 If the app does not launch, check these first:
