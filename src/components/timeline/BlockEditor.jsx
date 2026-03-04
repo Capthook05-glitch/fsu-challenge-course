@@ -6,17 +6,12 @@ const supabase = getSupabaseClient();
 
 const BLOCK_TYPES = ['activity','debrief','break','transition','custom'];
 
-export function BlockEditor({ block, onSave, onDelete, onClose }) {
+export function BlockEditor({ block, allGames = [], onSave, onDelete, onClose }) {
   const [form, setForm] = useState({ ...block });
-  const [games, setGames] = useState([]);
   const [gameSearch, setGameSearch] = useState('');
   const [debriefSet, setDebriefSet] = useState(null);
 
   useEffect(() => {
-    supabase.from('games').select('id,name,goals,time_min,time_max')
-      .eq('is_active', true).order('name')
-      .then(({ data }) => setGames(data || []));
-
     // Parse existing debrief set from notes
     if (block.block_type === 'debrief' && block.notes) {
       try {
@@ -33,21 +28,22 @@ export function BlockEditor({ block, onSave, onDelete, onClose }) {
     setForm(f => ({ ...f, notes: JSON.stringify({ id: qs.id, title: qs.title, questions: qs.questions, theory_tags: qs.theory_tags }) }));
   }
 
-  const filteredGames = games.filter(g =>
+  const filteredGames = allGames.filter(g =>
     !gameSearch || g.name.toLowerCase().includes(gameSearch.toLowerCase())
   );
 
   async function handleSave() {
     const { error } = await supabase.from('timeline_blocks')
       .update({
-        block_type:   form.block_type,
-        game_id:      form.game_id || null,
-        title:        form.title   || null,
-        duration_min: parseInt(form.duration_min) || 30,
-        start_time:   parseInt(form.start_time)   || 0,
-        location:     form.location || null,
-        notes:        form.notes   || null,
-        subgroup:     form.subgroup || null,
+        block_type:            form.block_type,
+        game_id:               form.game_id || null,
+        title:                 form.title   || null,
+        duration_min:          parseInt(form.duration_min) || 30,
+        start_time:            parseInt(form.start_time)   || 0,
+        location:              form.location || null,
+        notes:                 form.notes   || null,
+        subgroup:              form.subgroup || null,
+        assigned_facilitator:  form.assigned_facilitator || null,
       }).eq('id', block.id);
     if (!error) onSave();
   }
@@ -140,6 +136,13 @@ export function BlockEditor({ block, onSave, onDelete, onClose }) {
           <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Subgroup</label>
           <input value={form.subgroup || ''} onChange={e => set('subgroup', e.target.value)}
             placeholder="e.g. Group A, Full Group..."
+            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Assigned Facilitator</label>
+          <input value={form.assigned_facilitator || ''} onChange={e => set('assigned_facilitator', e.target.value)}
+            placeholder="e.g. Alex, Team B Lead..."
             className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
         </div>
 

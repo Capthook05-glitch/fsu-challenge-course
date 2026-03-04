@@ -11,11 +11,15 @@ const ROLE_LABEL = {
 };
 
 const NAV_ITEMS = [
-  { to: '/',         label: 'Dashboard',  icon: '⊞', roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/games',    label: 'Activities', icon: '◈', roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/sessions', label: 'Sessions',   icon: '▦', roles: ['admin','lead_facilitator'] },
-  { to: '/groups',   label: 'Groups',     icon: '◉', roles: ['admin','lead_facilitator'] },
-  { to: '/sites',    label: 'Sites',      icon: '◎', roles: ['admin','lead_facilitator'] },
+  { to: '/',          label: 'Dashboard',  icon: '⊞', roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/games',     label: 'Activities', icon: '◈', roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/sessions',  label: 'Sessions',   icon: '▦', roles: ['admin','lead_facilitator'] },
+  { to: '/templates', label: 'Templates',  icon: '⬡', roles: ['admin','lead_facilitator'] },
+  { to: '/courses',   label: 'Curriculum', icon: '◧', roles: ['admin','lead_facilitator'] },
+  { to: '/groups',    label: 'Groups',     icon: '◉', roles: ['admin','lead_facilitator'] },
+  { to: '/sites',     label: 'Sites',      icon: '◎', roles: ['admin','lead_facilitator'] },
+  { to: '/analytics', label: 'Analytics',  icon: '▲', roles: ['admin','lead_facilitator'] },
+  { to: '/incidents', label: 'Incidents',  icon: '!', roles: ['admin','lead_facilitator'] },
 ];
 
 export default function AppShell() {

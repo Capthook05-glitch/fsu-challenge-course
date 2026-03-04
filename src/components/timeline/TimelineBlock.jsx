@@ -29,8 +29,8 @@ function fmtStartTime(minutes) {
   return `${display}:${String(m).padStart(2,'0')} ${period}`;
 }
 
-export function TimelineBlock({ block, game, onEdit }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+export function TimelineBlock({ block, game, onEdit, readOnly = false }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id, disabled: readOnly });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -46,8 +46,8 @@ export function TimelineBlock({ block, game, onEdit }) {
       className="flex items-stretch bg-fsu-surface border border-fsu-border rounded-xl overflow-hidden hover:border-fsu-border2 hover:shadow-sm transition-all">
       {/* Drag handle + type color bar */}
       <div
-        {...attributes} {...listeners}
-        className="w-1.5 flex-shrink-0 cursor-grab active:cursor-grabbing"
+        {...(!readOnly ? { ...attributes, ...listeners } : {})}
+        className={`w-1.5 flex-shrink-0 ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}`}
         style={{ background: colors.border }}
       />
       <div className="flex-shrink-0 w-2" style={{ background: colors.bg }} />
@@ -79,19 +79,26 @@ export function TimelineBlock({ block, game, onEdit }) {
                 {block.subgroup}
               </span>
             )}
+            {block.assigned_facilitator && (
+              <span className="text-xs bg-fsu-garnet/8 border border-fsu-garnet/20 text-fsu-garnet px-1.5 py-0.5 rounded-full">
+                {block.assigned_facilitator}
+              </span>
+            )}
             {game?.goals?.slice(0,2).map(g => <GoalTag key={g} goal={g} />)}
           </div>
         </div>
       </div>
 
-      {/* Edit button */}
-      <button
-        onClick={() => onEdit(block)}
-        className="flex-shrink-0 px-3 text-fsu-muted hover:text-fsu-garnet hover:bg-fsu-soft transition-colors"
-        style={{ background: colors.bg }}
-      >
-        ✎
-      </button>
+      {/* Edit button (hidden in read-only mode) */}
+      {!readOnly && (
+        <button
+          onClick={() => onEdit(block)}
+          className="flex-shrink-0 px-3 text-fsu-muted hover:text-fsu-garnet hover:bg-fsu-soft transition-colors"
+          style={{ background: colors.bg }}
+        >
+          ✎
+        </button>
+      )}
     </div>
   );
 }

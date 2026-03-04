@@ -12,6 +12,10 @@ import FeedbackForm from './pages/FeedbackForm';
 import AdminPanel from './pages/AdminPanel';
 import GroupProfiles from './pages/GroupProfiles';
 import SiteProfiles from './pages/SiteProfiles';
+import Templates from './pages/Templates';
+import Analytics from './pages/Analytics';
+import IncidentLog from './pages/IncidentLog';
+import Courses from './pages/Courses';
 import { ProfileProvider } from './context/ProfileContext';
 import { getSupabaseClient, missingSupabaseEnv } from './lib/supabase';
 
@@ -41,11 +45,23 @@ function AuthGate({ session }) {
           <Route path="sessions" element={
             <RequireRole roles={PLANNERS}><SessionList /></RequireRole>
           } />
+          <Route path="templates" element={
+            <RequireRole roles={PLANNERS}><Templates /></RequireRole>
+          } />
+          <Route path="courses" element={
+            <RequireRole roles={PLANNERS}><Courses /></RequireRole>
+          } />
           <Route path="groups" element={
             <RequireRole roles={PLANNERS}><GroupProfiles /></RequireRole>
           } />
           <Route path="sites" element={
             <RequireRole roles={PLANNERS}><SiteProfiles /></RequireRole>
+          } />
+          <Route path="analytics" element={
+            <RequireRole roles={PLANNERS}><Analytics /></RequireRole>
+          } />
+          <Route path="incidents" element={
+            <RequireRole roles={PLANNERS}><IncidentLog /></RequireRole>
           } />
 
           {/* Admin only */}

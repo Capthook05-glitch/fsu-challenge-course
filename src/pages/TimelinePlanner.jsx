@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -148,7 +148,17 @@ export default function TimelinePlanner() {
   const [allGames, setAllGames]   = useState([]);
   const [showAddGame, setShowAddGame] = useState(false);
   const [gameSearch, setGameSearch]   = useState('');
-  const [showShare, setShowShare] = useState(false);
+  const [showShare, setShowShare]               = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName]         = useState('');
+  const [templateDesc, setTemplateDesc]         = useState('');
+  const [savingTemplate, setSavingTemplate]     = useState(false);
+  const [logs, setLogs]                         = useState([]);
+  const [comments, setComments]                 = useState([]);
+  const [newComment, setNewComment]             = useState('');
+  const [commentBlock, setCommentBlock]         = useState(null);
+  const [aiSuggestions, setAiSuggestions]       = useState([]);
+  const [showAi, setShowAi]                     = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -171,10 +181,12 @@ export default function TimelinePlanner() {
 
   useEffect(() => {
     async function load() {
-      const { data: sess } = await supabase.from('sessions').select('*').eq('id', id).single();
+      const [{ data: sess }, , { data: gs }] = await Promise.all([
+        supabase.from('sessions').select('*').eq('id', id).single(),
+        loadBlocks(),
+        supabase.from('games').select('*').eq('is_active', true).order('name'),
+      ]);
       if (sess) { setSession(sess); setNameVal(sess.name); setNotesVal(sess.notes || ''); setStatus(sess.status); }
-      await loadBlocks();
-      const { data: gs } = await supabase.from('games').select('*').eq('is_active', true).order('name');
       setAllGames(gs || []);
     }
     load();
@@ -217,6 +229,78 @@ export default function TimelinePlanner() {
     setSavingName(false);
   }
 
+  async function saveAsTemplate() {
+    if (!templateName.trim()) return;
+    setSavingTemplate(true);
+    const templateBlocks = blocks.map(b => ({
+      block_type: b.block_type, game_id: b.game_id, title: b.title,
+      start_time: b.start_time, duration_min: b.duration_min,
+      location: b.location, notes: b.notes, subgroup: b.subgroup,
+    }));
+    await supabase.from('session_templates').insert({
+      name: templateName, description: templateDesc,
+      blocks: templateBlocks, created_by: profile.id, is_public: false,
+    });
+    setSavingTemplate(false);
+    setShowSaveTemplate(false);
+    setTemplateName(''); setTemplateDesc('');
+    alert('Template saved!');
+  }
+
+  async function loadLogs() {
+    const { data } = await supabase.from('block_logs')
+      .select('*, timeline_blocks(title,block_type), profiles(name)')
+      .eq('session_id', id)
+      .order('submitted_at', { ascending: false });
+    setLogs(data || []);
+  }
+
+  async function loadComments() {
+    const { data } = await supabase.from('block_comments')
+      .select('*, profiles(name), timeline_blocks(title)')
+      .eq('session_id', id)
+      .order('created_at');
+    setComments(data || []);
+  }
+
+  async function addComment(blockId) {
+    if (!newComment.trim()) return;
+    await supabase.from('block_comments').insert({
+      block_id: blockId, session_id: id, author_id: profile.id, body: newComment,
+    });
+    setNewComment('');
+    loadComments();
+  }
+
+  function generateAiSuggestions() {
+    const blockTypes = blocks.map(b => b.block_type);
+    const gameCount  = blocks.filter(b => b.block_type === 'activity').length;
+    const debriefCnt = blocks.filter(b => b.block_type === 'debrief').length;
+    const hasBreak   = blocks.some(b => b.block_type === 'break');
+    const suggestions = [];
+    if (gameCount > 0 && debriefCnt === 0) {
+      suggestions.push({ icon: '💡', text: 'Consider adding a debrief block after your activities to process learning.' });
+    }
+    if (gameCount >= 3 && !hasBreak) {
+      suggestions.push({ icon: '⏸', text: 'You have 3+ activities — a break block helps maintain energy and focus.' });
+    }
+    if (blocks.length > 0 && blockTypes[0] !== 'activity') {
+      suggestions.push({ icon: '▶', text: 'Starting with an energizer or low-risk activity helps warm up the group.' });
+    }
+    const totalMin = blocks.reduce((s, b) => s + b.duration_min, 0);
+    if (totalMin > 0 && debriefCnt / gameCount < 0.3) {
+      suggestions.push({ icon: '🗣', text: `Debrief ratio is low (${debriefCnt}:${gameCount}). Aim for at least one debrief per 2-3 activities.` });
+    }
+    if (gameCount === 0) {
+      suggestions.push({ icon: '◈', text: 'Add an activity block to start building your session.' });
+    }
+    if (suggestions.length === 0) {
+      suggestions.push({ icon: '✓', text: 'Your session structure looks well-balanced!' });
+    }
+    setAiSuggestions(suggestions);
+    setShowAi(true);
+  }
+
   const summary = useMemo(() => {
     const totalMin = blocks.reduce((s, b) => s + b.duration_min, 0);
     const allGoals = new Set();
@@ -234,6 +318,12 @@ export default function TimelinePlanner() {
     document.body.classList.add('hide-facilitator-fields');
     window.print();
     setTimeout(() => document.body.classList.remove('hide-facilitator-fields'), 500);
+  }
+
+  function printWithTheory() {
+    document.body.classList.add('print-theory');
+    window.print();
+    setTimeout(() => document.body.classList.remove('print-theory'), 500);
   }
 
   const filteredAllGames = allGames.filter(g =>
@@ -293,6 +383,10 @@ export default function TimelinePlanner() {
                 className="text-xs border border-fsu-border text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-3 py-1.5 rounded-lg transition-colors">
                 Facilitator Guide
               </button>
+              <button onClick={printWithTheory}
+                className="text-xs border border-fsu-border text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-3 py-1.5 rounded-lg transition-colors">
+                Theory Export
+              </button>
               <button onClick={() => setShowShare(true)}
                 className="text-xs border border-fsu-border text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-3 py-1.5 rounded-lg transition-colors">
                 Share
@@ -336,19 +430,30 @@ export default function TimelinePlanner() {
         </button>
       </div>
 
-      {/* View toggle + add toolbar (edit only) */}
-      <div className="px-5 py-3 flex items-center gap-4 no-print">
-        <div className="flex gap-1 bg-fsu-soft rounded-xl p-1">
-          {['timeline','subgroup'].map(v => (
-            <button key={v} onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+      {/* View toggle + add toolbar */}
+      <div className="px-5 py-3 flex items-center gap-4 flex-wrap no-print">
+        <div className="flex gap-1 bg-fsu-soft rounded-xl p-1 flex-wrap">
+          {[
+            { v: 'timeline',  label: 'Timeline' },
+            { v: 'subgroup',  label: 'Subgroups' },
+            { v: 'safety',    label: 'Safety' },
+            { v: 'logs',      label: 'After-Action' },
+            { v: 'comments',  label: 'Comments' },
+          ].map(({ v, label }) => (
+            <button key={v}
+              onClick={() => {
+                setView(v);
+                if (v === 'logs') loadLogs();
+                if (v === 'comments') loadComments();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 view === v ? 'bg-fsu-surface text-fsu-garnet shadow-sm border border-fsu-border' : 'text-fsu-muted hover:text-fsu-text'
-              }`}>{v} View</button>
+              }`}>{label}</button>
           ))}
         </div>
 
-        {canEdit && (
-          <div className="flex gap-1.5 ml-auto">
+        {canEdit && view === 'timeline' && (
+          <div className="flex gap-1.5 ml-auto flex-wrap">
             {['activity','debrief','break','custom'].map(t => (
               <button key={t}
                 onClick={() => t === 'activity' ? setShowAddGame(true) : addBlock(t)}
@@ -356,6 +461,16 @@ export default function TimelinePlanner() {
                 + {t}
               </button>
             ))}
+            <button onClick={generateAiSuggestions}
+              className="text-xs border border-blue-200 text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors">
+              AI Tips
+            </button>
+            {canEdit && blocks.length > 0 && (
+              <button onClick={() => { setTemplateName(session?.name || ''); setShowSaveTemplate(true); }}
+                className="text-xs border border-fsu-border text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-2.5 py-1.5 rounded-lg transition-colors">
+                Save as Template
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -388,27 +503,44 @@ export default function TimelinePlanner() {
         </div>
       )}
 
-      {/* Blocks */}
+      {/* Main content area */}
       <div className="flex-1 overflow-y-auto px-5 pb-8">
-        {blocks.length === 0 && (
-          <div className="text-center py-16 text-fsu-muted">
-            <p className="text-lg font-medium mb-2">No blocks yet</p>
-            {canEdit
-              ? <p className="text-sm">Use the buttons above to add activities, debriefs, and breaks.</p>
-              : <p className="text-sm">This session has no blocks added yet.</p>
-            }
+
+        {/* AI Suggestions panel */}
+        {showAi && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-blue-800">Session Structure Tips</h3>
+              <button onClick={() => setShowAi(false)} className="text-blue-400 hover:text-blue-600 text-lg leading-none">×</button>
+            </div>
+            <div className="space-y-2">
+              {aiSuggestions.map((s, i) => (
+                <div key={i} className="flex gap-2 text-sm text-blue-700">
+                  <span>{s.icon}</span>
+                  <span>{s.text}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {view === 'timeline' && blocks.length > 0 && (
-          canEdit ? (
+        {/* ── Timeline view ── */}
+        {view === 'timeline' && (
+          blocks.length === 0 ? (
+            <div className="text-center py-16 text-fsu-muted">
+              <p className="text-lg font-medium mb-2">No blocks yet</p>
+              {canEdit
+                ? <p className="text-sm">Use the buttons above to add activities, debriefs, and breaks.</p>
+                : <p className="text-sm">This session has no blocks added yet.</p>
+              }
+            </div>
+          ) : canEdit ? (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {blocks.map(block => (
                     <TimelineBlock
-                      key={block.id}
-                      block={block}
+                      key={block.id} block={block}
                       game={block.game_id ? games[block.game_id] : null}
                       onEdit={setEditBlock}
                     />
@@ -417,23 +549,193 @@ export default function TimelinePlanner() {
               </SortableContext>
             </DndContext>
           ) : (
-            /* Read-only list — no drag, no edit button */
             <div className="space-y-2">
               {blocks.map(block => (
                 <TimelineBlock
-                  key={block.id}
-                  block={block}
+                  key={block.id} block={block}
                   game={block.game_id ? games[block.game_id] : null}
-                  onEdit={() => {}} /* no-op for read-only */
-                  readOnly
+                  onEdit={() => {}} readOnly
                 />
               ))}
             </div>
           )
         )}
 
+        {/* ── Subgroup view ── */}
         {view === 'subgroup' && blocks.length > 0 && (
           <SubgroupView blocks={blocks} games={games} onEdit={canEdit ? setEditBlock : () => {}} />
+        )}
+
+        {/* ── Safety view ── */}
+        {view === 'safety' && (
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <h3 className="font-semibold text-amber-800 mb-1 text-sm">Safety & Standards Overview</h3>
+              <p className="text-xs text-amber-700">Review safety notes and intensity ratings for all activities in this session before facilitating.</p>
+            </div>
+            {blocks.filter(b => b.block_type === 'activity' && b.game_id).map(block => {
+              const game = games[block.game_id];
+              if (!game) return null;
+              const physI  = game.physical_intensity || 0;
+              const psyI   = game.psychological_intensity || 0;
+              const isHighRisk = physI >= 4 || psyI >= 4;
+              return (
+                <div key={block.id}
+                  className={`bg-fsu-surface border rounded-xl p-4 ${isHighRisk ? 'border-orange-300' : 'border-fsu-border'}`}>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <h4 className="font-syne font-semibold text-fsu-text">{game.name || block.title}</h4>
+                      {block.location && <p className="text-xs text-fsu-muted">{block.location}</p>}
+                    </div>
+                    {isHighRisk && (
+                      <span className="text-xs bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                        High Risk
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-fsu-muted mb-1">Physical Intensity</p>
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(n => (
+                          <div key={n} className="w-4 h-2 rounded-sm"
+                            style={{ background: n <= physI ? (physI >= 4 ? '#ef4444' : '#782F40') : '#E8E2D9' }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-fsu-muted mb-1">Psych Intensity</p>
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(n => (
+                          <div key={n} className="w-4 h-2 rounded-sm"
+                            style={{ background: n <= psyI ? (psyI >= 4 ? '#7c3aed' : '#2563eb') : '#E8E2D9' }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  {game.safety_notes ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                      <p className="text-xs font-semibold mb-1 uppercase tracking-wide text-amber-600">Safety Notes</p>
+                      {game.safety_notes}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-fsu-faint">No safety notes recorded for this activity.</p>
+                  )}
+                  {game.learning_objectives?.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-fsu-muted mb-1 uppercase tracking-wide">Learning Objectives</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {game.learning_objectives.map((obj, i) => (
+                          <li key={i} className="text-xs text-fsu-text">{obj}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {blocks.filter(b => b.block_type === 'activity' && b.game_id).length === 0 && (
+              <p className="text-fsu-muted text-sm text-center py-8">No activities with safety data in this session.</p>
+            )}
+          </div>
+        )}
+
+        {/* ── After-Action Logs view ── */}
+        {view === 'logs' && (
+          <div className="space-y-4">
+            <p className="text-xs text-fsu-muted">Facilitator notes submitted during or after the session via Facilitation Mode.</p>
+            {logs.length === 0 ? (
+              <div className="text-center py-10 text-fsu-muted">
+                <p className="text-sm">No after-action logs yet.</p>
+                <p className="text-xs mt-1">Submit logs from Facilitation Mode after running each block.</p>
+              </div>
+            ) : (
+              logs.map(log => (
+                <div key={log.id} className="bg-fsu-surface border border-fsu-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-semibold text-fsu-garnet">{log.timeline_blocks?.title || log.timeline_blocks?.block_type || 'Block'}</span>
+                    <span className="text-xs text-fsu-faint">·</span>
+                    <span className="text-xs text-fsu-muted">{log.profiles?.name || 'Facilitator'}</span>
+                    <span className="text-xs text-fsu-faint ml-auto">{new Date(log.submitted_at).toLocaleDateString()}</span>
+                  </div>
+                  {log.what_happened && (
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-0.5">What Happened</p>
+                      <p className="text-sm text-fsu-text">{log.what_happened}</p>
+                    </div>
+                  )}
+                  {log.group_reaction && (
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-0.5">Group Reaction</p>
+                      <p className="text-sm text-fsu-text">{log.group_reaction}</p>
+                    </div>
+                  )}
+                  {log.change_next_time && (
+                    <div>
+                      <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-0.5">Change Next Time</p>
+                      <p className="text-sm text-fsu-text">{log.change_next_time}</p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ── Comments view ── */}
+        {view === 'comments' && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {blocks.map(block => {
+                const blockComments = comments.filter(c => c.block_id === block.id);
+                return (
+                  <div key={block.id} className="bg-fsu-surface border border-fsu-border rounded-xl overflow-hidden">
+                    <button className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-fsu-soft transition-colors"
+                      onClick={() => setCommentBlock(commentBlock === block.id ? null : block.id)}>
+                      <span className="text-sm font-medium text-fsu-text flex-1">
+                        {games[block.game_id]?.name || block.title || block.block_type}
+                      </span>
+                      {blockComments.length > 0 && (
+                        <span className="text-xs bg-fsu-garnet/10 text-fsu-garnet border border-fsu-garnet/20 px-2 py-0.5 rounded-full">
+                          {blockComments.length}
+                        </span>
+                      )}
+                      <span className="text-fsu-faint text-sm">{commentBlock === block.id ? '▲' : '▼'}</span>
+                    </button>
+                    {commentBlock === block.id && (
+                      <div className="border-t border-fsu-border px-4 py-3 space-y-3">
+                        {blockComments.length === 0 && (
+                          <p className="text-xs text-fsu-faint">No comments yet.</p>
+                        )}
+                        {blockComments.map(c => (
+                          <div key={c.id} className="bg-fsu-soft rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-semibold text-fsu-text">{c.profiles?.name || 'User'}</span>
+                              <span className="text-xs text-fsu-faint">{new Date(c.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm text-fsu-text">{c.body}</p>
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <input value={newComment} onChange={e => setNewComment(e.target.value)}
+                            placeholder="Add a comment..."
+                            onKeyDown={e => e.key === 'Enter' && addComment(block.id)}
+                            className="flex-1 border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+                          <button onClick={() => addComment(block.id)}
+                            className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                            Post
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {blocks.length === 0 && (
+                <p className="text-fsu-muted text-sm text-center py-8">No blocks to comment on.</p>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
@@ -443,6 +745,7 @@ export default function TimelinePlanner() {
           <div className="fixed inset-0 bg-black/20 z-40 no-print" onClick={() => setEditBlock(null)} />
           <BlockEditor
             block={editBlock}
+            allGames={allGames}
             onSave={() => { setEditBlock(null); loadBlocks(); }}
             onDelete={() => { setEditBlock(null); loadBlocks(); }}
             onClose={() => setEditBlock(null)}
@@ -452,6 +755,67 @@ export default function TimelinePlanner() {
 
       {/* Share modal */}
       {showShare && <ShareModal sessionId={id} onClose={() => setShowShare(false)} />}
+
+      {/* Theory Export section (hidden on screen, shown when .print-theory is set) */}
+      <div className="theory-section px-5 py-4">
+        <h2 className="text-xl font-bold mb-4">Theory & Learning Framework</h2>
+        {blocks.filter(b => b.block_type === 'debrief').map(block => {
+          let qs = null;
+          try { qs = block.notes ? JSON.parse(block.notes) : null; } catch {}
+          if (!qs) return null;
+          return (
+            <div key={block.id} className="mb-6 border border-gray-300 rounded-lg p-4">
+              <h3 className="font-bold mb-1">{qs.title}</h3>
+              {qs.theory_tags?.length > 0 && (
+                <p className="text-sm text-gray-500 mb-2">Theory: {qs.theory_tags.join(', ')}</p>
+              )}
+              <ul className="list-disc list-inside space-y-1">
+                {qs.questions?.map((q, i) => <li key={i} className="text-sm">{q}</li>)}
+              </ul>
+            </div>
+          );
+        })}
+        {blocks.filter(b => b.block_type === 'debrief').length === 0 && (
+          <p className="text-gray-500">No debrief blocks in this session.</p>
+        )}
+      </div>
+
+      {/* Save as Template modal */}
+      {showSaveTemplate && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <div className="bg-fsu-surface rounded-2xl shadow-xl w-full max-w-sm">
+            <div className="px-5 py-4 border-b border-fsu-border flex items-center justify-between">
+              <h2 className="font-syne font-bold text-fsu-text">Save as Template</h2>
+              <button onClick={() => setShowSaveTemplate(false)} className="text-fsu-muted hover:text-fsu-text text-xl">×</button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Template Name</label>
+                <input value={templateName} onChange={e => setTemplateName(e.target.value)}
+                  placeholder="e.g. Full-Day Leadership Programme"
+                  className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-fsu-muted uppercase mb-1 block">Description (optional)</label>
+                <textarea value={templateDesc} onChange={e => setTemplateDesc(e.target.value)}
+                  rows={2} placeholder="What is this template for?"
+                  className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
+              </div>
+              <p className="text-xs text-fsu-muted">{blocks.length} block{blocks.length !== 1 ? 's' : ''} will be saved.</p>
+            </div>
+            <div className="px-5 py-4 border-t border-fsu-border flex gap-3">
+              <button onClick={saveAsTemplate} disabled={savingTemplate || !templateName.trim()}
+                className="flex-1 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
+                {savingTemplate ? 'Saving…' : 'Save Template'}
+              </button>
+              <button onClick={() => setShowSaveTemplate(false)}
+                className="border border-fsu-border text-fsu-muted px-4 py-2.5 rounded-xl text-sm">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
