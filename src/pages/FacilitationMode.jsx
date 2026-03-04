@@ -1,240 +1,174 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { GoalTag } from '../components/ui/GoalTag';
 
-export function FacilitationMode() {
+const supabase = getSupabaseClient();
+
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+export default function FacilitationMode() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [sessionGames, setSessionGames] = useState([]);
-  const [sessionName, setSessionName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
+  const [session, setSession] = useState(null);
+  const [blocks, setBlocks] = useState([]);
+  const [games, setGames] = useState({});
+  const [idx, setIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [running, setRunning] = useState(false);
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    Promise.all([
-      supabase.from('sessions').select('name').eq('id', id).single(),
-      supabase.from('session_games').select('id, position, facilitator_note, game:games(*)').eq('session_id', id).order('position'),
-    ]).then(([{ data: s }, { data: sg }]) => {
-      setSessionName(s?.name ?? '');
-      setSessionGames(sg ?? []);
-      setLoading(false);
-    });
+    async function load() {
+      const [{ data: sess }, { data: blks }] = await Promise.all([
+        supabase.from('sessions').select('*').eq('id', id).single(),
+        supabase.from('timeline_blocks').select('*').eq('session_id', id).order('position'),
+      ]);
+      setSession(sess);
+      const bs = blks || [];
+      setBlocks(bs);
+      // Load game details
+      const gids = [...new Set(bs.filter(b => b.game_id).map(b => b.game_id))];
+      if (gids.length) {
+        const { data: gs } = await supabase.from('games').select('*').in('id', gids);
+        const gmap = {};
+        (gs || []).forEach(g => { gmap[g.id] = g; });
+        setGames(gmap);
+      }
+    }
+    load();
   }, [id]);
 
   useEffect(() => {
-    if (!timerRunning) { clearInterval(intervalRef.current); return; }
-    intervalRef.current = setInterval(() => {
-      setTimerSeconds((s) => s + 1);
-    }, 1000);
+    if (running) {
+      intervalRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+    } else {
+      clearInterval(intervalRef.current);
+    }
     return () => clearInterval(intervalRef.current);
-  }, [timerRunning]);
+  }, [running]);
 
-  async function endSession() {
-    const supabase = getSupabaseClient();
-    await supabase.from('sessions').update({ status: 'completed' }).eq('id', id);
-    navigate(`/sessions/${id}`);
+  function resetTimer() { setElapsed(0); setRunning(false); }
+  function nextBlock() { if (idx < blocks.length - 1) { setIdx(i => i+1); resetTimer(); } }
+  function prevBlock() { if (idx > 0) { setIdx(i => i-1); resetTimer(); } }
+
+  const block = blocks[idx];
+  const game  = block?.game_id ? games[block.game_id] : null;
+  const title = game?.name || block?.title || 'Break';
+  const minSec = (game?.time_min || block?.duration_min || 10) * 60;
+  const maxSec = (game?.time_max || block?.duration_min || 30) * 60;
+
+  function timerStyle() {
+    if (elapsed >= maxSec) return { color: '#dc2626' };
+    if (elapsed >= minSec) return { color: '#d97706' };
+    return { color: '#782F40' };
   }
 
-  function toggleTimer() {
-    setTimerRunning((r) => !r);
+  function timerStatus() {
+    if (elapsed >= maxSec) return { label: 'Over time', bg: '#fee2e2', color: '#dc2626' };
+    if (elapsed >= minSec) return { label: 'In the zone', bg: '#fef3c7', color: '#d97706' };
+    return { label: running ? 'Running' : 'Ready', bg: '#F5F2EE', color: '#78716C' };
   }
 
-  function resetTimer() {
-    setTimerRunning(false);
-    setTimerSeconds(0);
-  }
-
-  function goTo(index) {
-    resetTimer();
-    setCurrentIndex(index);
-  }
-
-  function fmtTime(s) {
-    const m = Math.floor(s / 60);
-    const sec = String(s % 60).padStart(2, '0');
-    return `${m}:${sec}`;
-  }
-
-  function timerColor(s, game) {
-    if (s > game.time_max * 60) return '#ef4444'; // over
-    if (s > game.time_min * 60) return '#f5a623'; // warning
-    return '#CEB069'; // normal gold
-  }
-
-  function timerStatus(s, game) {
-    if (s > game.time_max * 60) return '⚠ Over time';
-    if (s > game.time_min * 60) return '⚡ In the zone';
-    return `Target: ${game.time_min}–${game.time_max} min`;
-  }
-
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-fsu-navy text-fsu-muted">Loading…</div>;
-
-  if (sessionGames.length === 0) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-fsu-navy flex-col gap-4 text-fsu-muted">
-        <p>No games in this session.</p>
-        <Link to={`/sessions/${id}`} className="text-fsu-gold hover:underline">← Back to planner</Link>
-      </div>
-    );
-  }
-
-  if (currentIndex >= sessionGames.length) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-fsu-navy flex-col gap-6 px-6 text-center">
-        <p className="text-5xl">🎉</p>
-        <h1 className="text-3xl font-bold text-fsu-gold" style={{ fontFamily: 'Syne' }}>Session Complete!</h1>
-        <p className="text-fsu-muted">All {sessionGames.length} games finished.</p>
-        <button
-          onClick={endSession}
-          className="rounded-xl px-7 py-3 font-bold text-white hover:brightness-110 transition-all"
-          style={{ background: 'linear-gradient(135deg, #782F40, #9e3a4d)', fontFamily: 'Syne' }}
-        >
-          Mark as Completed & Exit
-        </button>
-      </div>
-    );
-  }
-
-  const sg = sessionGames[currentIndex];
-  const game = sg.game;
-  const tColor = timerColor(timerSeconds, game);
+  const status = timerStatus();
 
   return (
-    <div className="min-h-screen bg-fsu-navy flex flex-col">
+    <div className="min-h-screen bg-fsu-white flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-fsu-border bg-fsu-bg2 px-6 py-3">
-        <Link to={`/sessions/${id}`} className="text-sm text-fsu-muted hover:text-white transition-colors">← Exit</Link>
-        <span className="text-sm text-fsu-muted">{sessionName}</span>
-        <span className="text-sm text-fsu-faint">{currentIndex + 1} / {sessionGames.length}</span>
+      <div className="bg-fsu-garnet text-white px-4 py-3 flex items-center justify-between no-print">
+        <Link to={`/sessions/${id}`} className="text-white/70 hover:text-white text-sm">&larr; Back</Link>
+        <span className="font-syne font-bold text-sm truncate max-w-xs">{session?.name}</span>
+        <span className="text-white/50 text-sm">{idx+1}/{blocks.length}</span>
       </div>
 
       {/* Progress dots */}
-      <div className="flex gap-1.5 px-6 py-2 bg-fsu-bg2 border-b border-fsu-border">
-        {sessionGames.map((_, i) => (
+      <div className="flex gap-1.5 justify-center px-4 py-3 no-print">
+        {blocks.map((_, i) => (
           <button
             key={i}
-            onClick={() => goTo(i)}
-            className="h-1.5 flex-1 rounded-full transition-all"
-            style={{
-              background: i < currentIndex ? '#3ecf8e' : i === currentIndex ? '#CEB069' : '#1e2d45',
-            }}
+            onClick={() => { setIdx(i); resetTimer(); }}
+            className="h-2 rounded-full transition-all"
+            style={{ width: i === idx ? 24 : 8, background: i === idx ? '#782F40' : '#E8E2D9' }}
           />
         ))}
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 max-w-2xl mx-auto w-full space-y-6">
-        {/* Game header */}
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint mb-1">
-            Game {currentIndex + 1} of {sessionGames.length}
-          </p>
-          <h1 className="text-3xl font-bold text-white leading-tight" style={{ fontFamily: 'Syne' }}>{game.name}</h1>
-          <div className="flex flex-wrap gap-3 mt-2 text-sm text-fsu-muted">
-            <span>👥 {game.min_group}–{game.max_group} people</span>
-            <span>⏱ {game.time_min}–{game.time_max} min</span>
-            <span>🏃 <span className="capitalize">{game.activity_level}</span></span>
-            {game.setting?.map((s) => <span key={s}>📍 {s}</span>)}
-          </div>
-        </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-2xl mx-auto w-full">
+        {block ? (
+          <>
+            {/* Activity title */}
+            <h1 className="font-syne font-bold text-3xl md:text-4xl text-fsu-text text-center mb-2">{title}</h1>
 
-        {/* Count-up Timer */}
-        <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint mb-3">Activity Timer</p>
-          <div
-            className="text-5xl font-bold mb-1 transition-colors"
-            style={{ fontFamily: 'Syne', color: tColor, letterSpacing: '-0.02em' }}
-          >
-            {fmtTime(timerSeconds)}
-          </div>
-          <p className="text-xs mb-4" style={{ color: tColor }}>{timerStatus(timerSeconds, game)}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={toggleTimer}
-              className="rounded-lg px-5 py-2 text-sm font-bold transition-all"
-              style={timerRunning
-                ? { background: '#162035', color: '#e8edf5', border: '1px solid #1e2d45' }
-                : { background: '#782F40', color: '#fff', border: '1px solid #782F40' }
-              }
-            >
-              {timerRunning ? '⏸ Pause' : '▶ Start'}
-            </button>
-            <button
-              onClick={resetTimer}
-              className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
-              style={{ background: '#162035', color: '#7a90b0', border: '1px solid #1e2d45' }}
-            >
-              ↺ Reset
-            </button>
-          </div>
-        </div>
+            {/* Goals */}
+            {game?.goals?.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
+                {game.goals.map(g => <GoalTag key={g} goal={g} size="lg" />)}
+              </div>
+            )}
 
-        {/* Description */}
-        <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint mb-3">Activity Description</p>
-          <p className="leading-relaxed" style={{ color: '#e8edf5', fontSize: '15px', lineHeight: '1.65' }}>{game.description}</p>
-        </div>
-
-        {/* Goals */}
-        {game.goals?.length > 0 && (
-          <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint mb-3">Goal Focus</p>
-            <div className="flex flex-wrap gap-2">
-              {game.goals.map((g) => <GoalTag key={g} goal={g} size="lg" />)}
+            {/* Meta */}
+            <div className="flex gap-4 text-sm text-fsu-muted mb-8">
+              {game && <span>{game.min_group}–{game.max_group} people</span>}
+              {(game || block) && <span>{(game?.time_min || block?.duration_min)}–{(game?.time_max || block?.duration_min)} min</span>}
+              {block?.location && <span>{block.location}</span>}
             </div>
-          </div>
-        )}
 
-        {/* Materials */}
-        {game.materials && (
-          <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint mb-3">Materials Needed</p>
-            <p style={{ color: '#e8edf5' }}>{game.materials}</p>
-          </div>
-        )}
+            {/* Timer */}
+            <div className="text-center mb-6">
+              <div className="font-syne font-bold text-7xl mb-2 tabular-nums" style={timerStyle()}>
+                {fmt(elapsed)}
+              </div>
+              <span className="text-sm font-semibold px-3 py-1 rounded-full" style={{ background: status.bg, color: status.color }}>
+                {status.label}
+              </span>
+            </div>
 
-        {/* Facilitation tips */}
-        {game.facilitation && (
-          <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint mb-3">Facilitation & Debrief Notes</p>
-            <p className="whitespace-pre-wrap leading-relaxed" style={{ color: '#e8edf5', fontSize: '15px', lineHeight: '1.65' }}>{game.facilitation}</p>
-          </div>
-        )}
+            {/* Timer controls */}
+            <div className="flex gap-3 mb-8 no-print">
+              <button onClick={() => setRunning(r => !r)}
+                className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
+                {running ? 'Pause' : 'Start'}
+              </button>
+              <button onClick={resetTimer}
+                className="border border-fsu-border2 text-fsu-muted hover:text-fsu-text px-4 py-2.5 rounded-xl transition-colors">
+                Reset
+              </button>
+            </div>
 
-        {/* Per-session facilitator note */}
-        {sg.facilitator_note && (
-          <div className="rounded-xl border p-5" style={{ borderColor: 'rgba(206,176,105,0.3)', background: 'rgba(206,176,105,0.05)', borderLeft: '3px solid #CEB069' }}>
-            <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#CEB069' }}>Your Session Note</p>
-            <p style={{ color: '#e8edf5' }}>{sg.facilitator_note}</p>
-          </div>
+            {/* Notes */}
+            {(block?.notes || game?.facilitation) && (
+              <div className="w-full bg-fsu-soft border border-fsu-border rounded-xl p-4 mb-4 text-sm text-fsu-muted leading-relaxed">
+                {block?.notes || game?.facilitation}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-fsu-muted">No blocks in this session.</p>
         )}
       </div>
 
       {/* Bottom nav */}
-      <div className="border-t border-fsu-border bg-fsu-bg2 px-6 py-4 flex items-center justify-between gap-4">
-        <button
-          onClick={() => goTo(currentIndex - 1)}
-          disabled={currentIndex === 0}
-          className="rounded-xl px-6 py-2.5 font-semibold transition-all disabled:opacity-30"
-          style={{ background: '#162035', color: '#e8edf5', border: '1px solid #1e2d45' }}
-        >
-          ← Prev
+      <div className="px-6 py-4 flex gap-3 justify-center no-print">
+        <button onClick={prevBlock} disabled={idx === 0}
+          className="border border-fsu-border2 text-fsu-text px-6 py-2.5 rounded-xl font-medium disabled:opacity-30 hover:border-fsu-garnet transition-colors">
+          &larr; Previous
         </button>
-        <button onClick={endSession} className="text-xs text-fsu-faint hover:text-fsu-muted transition-colors">
-          End Session
-        </button>
-        <button
-          onClick={() => goTo(currentIndex + 1)}
-          className="rounded-xl px-6 py-2.5 font-bold text-white transition-all hover:brightness-110"
-          style={{ background: 'linear-gradient(135deg, #782F40, #9e3a4d)', fontFamily: 'Syne' }}
-        >
-          {currentIndex === sessionGames.length - 1 ? 'Finish →' : 'Next →'}
-        </button>
+        {idx < blocks.length - 1 ? (
+          <button onClick={nextBlock}
+            className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
+            Next &rarr;
+          </button>
+        ) : (
+          <Link to={`/sessions/${id}`}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
+            Finish Session
+          </Link>
+        )}
       </div>
     </div>
   );

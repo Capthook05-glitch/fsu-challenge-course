@@ -2,35 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
+@layer base {
+  body {
+    background-color: #FAFAF8;
+    color: #1C1917;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Syne', system-ui, sans-serif;
+  }
+
+  /* Light scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #F5F2EE;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D4CBB8;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B8A898;
+  }
 }
 
-body {
-  @apply bg-fsu-navy text-white min-h-screen;
-  margin: 0;
-  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: white !important; color: black !important; font-size: 12pt; }
+  .print-table { width: 100%; border-collapse: collapse; }
+  .print-table td, .print-table th { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  .print-table th { background: #f5f2ee; font-weight: 600; }
 }
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: 'Syne', system-ui, sans-serif;
-}
-
-/* Custom thin scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #2a3f5f;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #3a4f6a;
+body.hide-facilitator-fields .facilitator-only {
+  display: none !important;
 }

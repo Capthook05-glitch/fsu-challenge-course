@@ -2,120 +2,109 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 
-function StarInput({ value, onChange }) {
-  const [hovered, setHovered] = useState(0);
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          onClick={() => onChange(star)}
-          onMouseEnter={() => setHovered(star)}
-          onMouseLeave={() => setHovered(0)}
-          className={`text-3xl transition-colors ${(hovered || value) >= star ? 'text-fsu-gold' : 'text-slate-700'}`}
-        >
-          ★
-        </button>
-      ))}
-    </div>
-  );
-}
+const supabase = getSupabaseClient();
 
-export function FeedbackForm() {
+export default function FeedbackForm() {
   const { sessionId } = useParams();
-  const [rating, setRating] = useState(0);
-  const [whatWorked, setWhatWorked] = useState('');
+  const [rating, setRating]           = useState(0);
+  const [hovered, setHovered]         = useState(0);
+  const [whatWorked, setWhatWorked]   = useState('');
   const [whatImprove, setWhatImprove] = useState('');
-  const [groupSize, setGroupSize] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | submitting | done | error
+  const [groupSize, setGroupSize]     = useState('');
+  const [submitted, setSubmitted]     = useState(false);
+  const [error, setError]             = useState('');
 
-  async function handleSubmit(e) {
+  async function submit(e) {
     e.preventDefault();
-    if (!rating) return;
-    setStatus('submitting');
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.from('session_feedback').insert({
+    if (!rating) { setError('Please select a rating.'); return; }
+    const { error: err } = await supabase.from('session_feedback').insert({
       session_id: sessionId,
       rating,
-      what_worked: whatWorked.trim() || null,
-      what_improve: whatImprove.trim() || null,
-      group_size: groupSize ? Number(groupSize) : null,
+      what_worked: whatWorked,
+      what_improve: whatImprove,
+      group_size: groupSize ? parseInt(groupSize) : null,
     });
-    setStatus(error ? 'error' : 'done');
+    if (err) { setError('Something went wrong. Please try again.'); return; }
+    setSubmitted(true);
   }
 
-  if (status === 'done') {
+  if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-fsu-navy px-6">
-        <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900/70 p-8 text-center space-y-3">
-          <p className="text-4xl">🎉</p>
-          <h1 className="text-xl font-semibold text-fsu-gold">Thank you!</h1>
-          <p className="text-slate-400 text-sm">Your feedback has been submitted.</p>
+      <div className="min-h-screen bg-fsu-white flex items-center justify-center p-4">
+        <div className="bg-fsu-surface border border-fsu-border rounded-2xl p-8 max-w-sm text-center">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+            ✓
+          </div>
+          <h2 className="font-syne font-bold text-xl text-fsu-text mb-2">Thank you!</h2>
+          <p className="text-fsu-muted text-sm">Your feedback helps us improve future programs.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-fsu-navy px-6 py-12">
-      <div className="w-full max-w-md space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-fsu-gold">Session Feedback</h1>
-          <p className="mt-1 text-sm text-slate-400">Share your experience — it helps us improve.</p>
+    <div className="min-h-screen bg-fsu-white flex items-center justify-center p-4">
+      <div className="bg-fsu-surface border border-fsu-border rounded-2xl p-6 max-w-md w-full">
+        <div className="mb-6">
+          <div className="w-10 h-10 bg-fsu-garnet rounded-xl flex items-center justify-center text-white font-syne font-bold text-sm mb-3">
+            FSU
+          </div>
+          <h1 className="font-syne font-bold text-xl text-fsu-text mb-1">Session Feedback</h1>
+          <p className="text-sm text-fsu-muted">Share your experience to help us improve.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={submit} className="space-y-5">
+          {/* Star rating */}
           <div>
-            <label className="block text-xs uppercase text-slate-500 mb-2">Overall Rating *</label>
-            <StarInput value={rating} onChange={setRating} />
+            <label className="text-sm font-semibold text-fsu-text block mb-2">How was the session? *</label>
+            <div className="flex gap-2">
+              {[1,2,3,4,5].map(n => (
+                <button
+                  key={n} type="button"
+                  onClick={() => setRating(n)}
+                  onMouseEnter={() => setHovered(n)}
+                  onMouseLeave={() => setHovered(0)}
+                  className="text-3xl transition-transform hover:scale-110"
+                  style={{ color: n <= (hovered || rating) ? '#CEB069' : '#E8E2D9' }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs uppercase text-slate-500 mb-1">What worked well?</label>
+            <label className="text-sm font-medium text-fsu-text block mb-1">What worked well?</label>
             <textarea
-              value={whatWorked}
-              onChange={(e) => setWhatWorked(e.target.value)}
-              rows={3}
-              placeholder="Activities, facilitation, energy…"
-              className="w-full rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-fsu-gold/50 resize-none"
+              value={whatWorked} onChange={e => setWhatWorked(e.target.value)} rows={3}
+              className="w-full border border-fsu-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none"
+              placeholder="Share what you enjoyed or found effective..."
             />
           </div>
 
           <div>
-            <label className="block text-xs uppercase text-slate-500 mb-1">What could be improved?</label>
+            <label className="text-sm font-medium text-fsu-text block mb-1">What could be improved?</label>
             <textarea
-              value={whatImprove}
-              onChange={(e) => setWhatImprove(e.target.value)}
-              rows={3}
-              placeholder="Suggestions for next time…"
-              className="w-full rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-fsu-gold/50 resize-none"
+              value={whatImprove} onChange={e => setWhatImprove(e.target.value)} rows={3}
+              className="w-full border border-fsu-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none"
+              placeholder="What would make this better next time?"
             />
           </div>
 
           <div>
-            <label className="block text-xs uppercase text-slate-500 mb-1">Group Size (optional)</label>
+            <label className="text-sm font-medium text-fsu-text block mb-1">Group size (optional)</label>
             <input
-              type="number"
-              min="1"
-              max="500"
-              value={groupSize}
-              onChange={(e) => setGroupSize(e.target.value)}
-              placeholder="How many participants?"
-              className="w-full rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-fsu-gold/50"
+              type="number" value={groupSize} onChange={e => setGroupSize(e.target.value)} min="1"
+              className="border border-fsu-border rounded-xl px-3 py-2 text-sm w-32 focus:outline-none focus:border-fsu-garnet text-fsu-text"
+              placeholder="e.g. 24"
             />
           </div>
 
-          {status === 'error' && (
-            <p className="text-red-400 text-sm">Something went wrong. Please try again.</p>
-          )}
+          {error && <p className="text-red-600 text-sm">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={!rating || status === 'submitting'}
-            className="w-full rounded-md bg-fsu-garnet px-4 py-2.5 font-medium hover:brightness-110 disabled:opacity-50"
-          >
-            {status === 'submitting' ? 'Submitting…' : 'Submit Feedback'}
+          <button type="submit"
+            className="w-full bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-3 rounded-xl font-semibold text-sm transition-colors">
+            Submit Feedback
           </button>
         </form>
       </div>

@@ -2,46 +2,41 @@ import { GOAL_META } from '../../lib/goalMeta';
 
 export function GoalTag({ goal, size = 'sm' }) {
   const meta = GOAL_META[goal];
-  const pad = size === 'lg' ? '5px 12px' : '2px 9px';
-  const fs = size === 'lg' ? '13px' : '11px';
+  const padding = size === 'lg' ? '4px 10px' : '2px 8px';
+  const fontSize = size === 'lg' ? '13px' : '11px';
 
-  if (meta) {
+  if (!meta) {
     return (
-      <span
-        style={{
-          backgroundColor: meta.color + '22',
-          color: meta.color,
-          border: `1px solid ${meta.color}33`,
-          borderRadius: '4px',
-          padding: pad,
-          fontSize: fs,
-          fontWeight: 600,
-          letterSpacing: '0.02em',
-          textTransform: 'uppercase',
-          display: 'inline-block',
-        }}
-      >
-        {meta.emoji} {goal}
+      <span style={{
+        display: 'inline-block',
+        padding,
+        fontSize,
+        fontWeight: 500,
+        borderRadius: '9999px',
+        background: '#F5F2EE',
+        color: '#78716C',
+        border: '1px solid #E8E2D9',
+        whiteSpace: 'nowrap',
+      }}>
+        {goal}
       </span>
     );
   }
 
   return (
-    <span
-      style={{
-        backgroundColor: 'rgba(100,116,139,0.2)',
-        color: '#94a3b8',
-        border: '1px solid rgba(100,116,139,0.2)',
-        borderRadius: '4px',
-        padding: pad,
-        fontSize: fs,
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.02em',
-        display: 'inline-block',
-      }}
-    >
-      {goal}
+    <span style={{
+      display: 'inline-block',
+      padding,
+      fontSize,
+      fontWeight: 600,
+      borderRadius: '9999px',
+      background: meta.bg,
+      color: meta.color,
+      border: `1px solid ${meta.color}44`,
+      whiteSpace: 'nowrap',
+      letterSpacing: '0.01em',
+    }}>
+      {meta.label}
     </span>
   );
 }
