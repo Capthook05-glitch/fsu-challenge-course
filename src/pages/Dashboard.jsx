@@ -3,6 +3,12 @@ import { Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
 
+const statusColor = {
+  draft:     { color: '#7a90b0' },
+  ready:     { color: '#CEB069' },
+  completed: { color: '#3ecf8e' },
+};
+
 export function Dashboard() {
   const { profile } = useProfile();
   const [stats, setStats] = useState({ sessions: 0, games: 0 });
@@ -15,7 +21,7 @@ export function Dashboard() {
     supabase
       .from('sessions')
       .select('id', { count: 'exact', head: true })
-      .eq('owner_id', profile.id === undefined ? '' : profile.id)
+      .eq('owner_id', profile.id)
       .eq('is_archived', false)
       .then(({ count }) => setStats((s) => ({ ...s, sessions: count ?? 0 })));
 
@@ -28,37 +34,32 @@ export function Dashboard() {
     supabase
       .from('sessions')
       .select('id, name, status, updated_at')
-      .eq('owner_id', profile.id === undefined ? '' : profile.id)
+      .eq('owner_id', profile.id)
       .eq('is_archived', false)
       .order('updated_at', { ascending: false })
       .limit(3)
       .then(({ data }) => setRecent(data ?? []));
   }, [profile]);
 
-  const statusColor = {
-    draft: 'text-slate-400',
-    ready: 'text-fsu-gold',
-    completed: 'text-green-400',
-  };
-
   return (
     <div className="space-y-8">
+      {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-semibold text-fsu-gold">
+        <h1 className="text-2xl font-bold text-fsu-gold" style={{ fontFamily: 'Syne' }}>
           Welcome back{profile?.name ? `, ${profile.name}` : ''}
         </h1>
-        <p className="mt-1 text-slate-400 text-sm">What are you facilitating today?</p>
+        <p className="mt-1 text-sm text-fsu-muted">What are you facilitating today?</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase text-slate-500 tracking-wide">Active Sessions</p>
-          <p className="mt-2 text-3xl font-bold text-slate-100">{stats.sessions}</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
+          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint">Active Sessions</p>
+          <p className="mt-2 text-4xl font-bold text-white" style={{ fontFamily: 'Syne' }}>{stats.sessions}</p>
         </div>
-        <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase text-slate-500 tracking-wide">Games Available</p>
-          <p className="mt-2 text-3xl font-bold text-slate-100">{stats.games}</p>
+        <div className="rounded-xl border border-fsu-border bg-fsu-bg2 p-5">
+          <p className="text-xs font-bold uppercase tracking-wide text-fsu-faint">Games Available</p>
+          <p className="mt-2 text-4xl font-bold text-white" style={{ fontFamily: 'Syne' }}>{stats.games}</p>
         </div>
       </div>
 
@@ -66,35 +67,37 @@ export function Dashboard() {
       <div className="flex flex-wrap gap-3">
         <Link
           to="/games"
-          className="rounded-md bg-fsu-garnet px-5 py-2.5 font-medium hover:brightness-110 transition-all"
+          className="rounded-xl px-6 py-3 font-bold text-white hover:brightness-110 transition-all"
+          style={{ background: 'linear-gradient(135deg, #782F40, #9e3a4d)', fontFamily: 'Syne' }}
         >
-          Browse Games
+          🗂 Browse Catalog
         </Link>
         <Link
           to="/sessions"
-          className="rounded-md bg-slate-800 px-5 py-2.5 font-medium hover:bg-slate-700 transition-all"
+          className="rounded-xl px-6 py-3 font-semibold transition-all"
+          style={{ background: '#162035', color: '#e8edf5', border: '1px solid #1e2d45' }}
         >
-          New Session
+          📋 New Session
         </Link>
       </div>
 
       {/* Recent sessions */}
       {recent.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500">Recent Sessions</h2>
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-fsu-faint">Recent Sessions</h2>
           <div className="space-y-2">
             {recent.map((s) => (
               <Link
                 key={s.id}
                 to={`/sessions/${s.id}`}
-                className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/70 px-4 py-3 hover:border-fsu-gold/30 transition-colors"
+                className="flex items-center justify-between rounded-xl border border-fsu-border bg-fsu-bg2 px-4 py-3 hover:border-fsu-border2 transition-colors"
               >
-                <span className="text-slate-100">{s.name}</span>
-                <span className={`text-xs capitalize ${statusColor[s.status] ?? 'text-slate-400'}`}>{s.status}</span>
+                <span className="text-white font-medium">{s.name}</span>
+                <span className="text-xs capitalize" style={statusColor[s.status] ?? { color: '#7a90b0' }}>{s.status}</span>
               </Link>
             ))}
           </div>
-          <Link to="/sessions" className="mt-3 block text-sm text-slate-500 hover:text-fsu-gold">
+          <Link to="/sessions" className="mt-3 block text-sm text-fsu-muted hover:text-fsu-gold transition-colors">
             View all sessions →
           </Link>
         </div>
