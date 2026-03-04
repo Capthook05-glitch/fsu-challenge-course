@@ -18,3 +18,19 @@ h3,
 h4 {
   font-family: 'Syne', system-ui, sans-serif;
 }
+
+/* Custom thin scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3f5f;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4f6a;
+}
