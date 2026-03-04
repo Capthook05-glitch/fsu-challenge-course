@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { GoalTag } from '../components/ui/GoalTag';
+import { useProfile } from '../context/ProfileContext';
 
 const supabase = getSupabaseClient();
 
@@ -14,6 +15,7 @@ function fmt(s) {
 export default function FacilitationMode() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { profile } = useProfile();
   const [session, setSession] = useState(null);
   const [blocks, setBlocks] = useState([]);
   const [games, setGames] = useState({});
@@ -21,6 +23,9 @@ export default function FacilitationMode() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef(null);
+  const [showLog, setShowLog] = useState(false);
+  const [logForm, setLogForm] = useState({ what_happened: '', group_reaction: '', change_next_time: '' });
+  const [savingLog, setSavingLog] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -55,6 +60,21 @@ export default function FacilitationMode() {
   function resetTimer() { setElapsed(0); setRunning(false); }
   function nextBlock() { if (idx < blocks.length - 1) { setIdx(i => i+1); resetTimer(); } }
   function prevBlock() { if (idx > 0) { setIdx(i => i-1); resetTimer(); } }
+
+  async function submitLog() {
+    if (!logForm.what_happened.trim()) return;
+    setSavingLog(true);
+    const block = blocks[idx];
+    await supabase.from('block_logs').insert({
+      block_id: block?.id,
+      session_id: id,
+      ...logForm,
+      submitted_by: profile?.id,
+    });
+    setSavingLog(false);
+    setLogForm({ what_happened: '', group_reaction: '', change_next_time: '' });
+    setShowLog(false);
+  }
 
   const block = blocks[idx];
   const game  = block?.game_id ? games[block.game_id] : null;
@@ -140,17 +160,64 @@ export default function FacilitationMode() {
               </button>
             </div>
 
-            {/* Notes */}
+            {/* Safety notes if any */}
+            {game?.safety_notes && (
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-sm text-amber-800">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-1">Safety Note</p>
+                {game.safety_notes}
+              </div>
+            )}
+
+            {/* Facilitator notes */}
             {(block?.notes || game?.facilitation) && (
               <div className="w-full bg-fsu-soft border border-fsu-border rounded-xl p-4 mb-4 text-sm text-fsu-muted leading-relaxed">
                 {block?.notes || game?.facilitation}
               </div>
             )}
+
+            {/* After-action log button */}
+            <button onClick={() => setShowLog(true)}
+              className="text-xs border border-fsu-border2 text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-4 py-2 rounded-xl transition-colors">
+              Log After-Action Notes
+            </button>
           </>
         ) : (
           <p className="text-fsu-muted">No blocks in this session.</p>
         )}
       </div>
+
+      {/* After-Action Log Modal */}
+      {showLog && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center p-4">
+          <div className="bg-fsu-surface rounded-2xl shadow-xl w-full max-w-md">
+            <div className="px-5 py-4 border-b border-fsu-border flex items-center justify-between">
+              <h2 className="font-syne font-bold text-fsu-text text-sm">After-Action Log — {blocks[idx]?.title || 'Block'}</h2>
+              <button onClick={() => setShowLog(false)} className="text-fsu-muted hover:text-fsu-text text-xl">×</button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {['what_happened','group_reaction','change_next_time'].map((field, i) => (
+                <div key={field}>
+                  <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">
+                    {['What happened?','Group reaction?','Change next time?'][i]}
+                  </label>
+                  <textarea value={logForm[field]} onChange={e => setLogForm(f => ({ ...f, [field]: e.target.value }))}
+                    rows={2} className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-4 border-t border-fsu-border flex gap-3">
+              <button onClick={submitLog} disabled={savingLog || !logForm.what_happened.trim()}
+                className="flex-1 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
+                {savingLog ? 'Saving…' : 'Save Log'}
+              </button>
+              <button onClick={() => setShowLog(false)}
+                className="border border-fsu-border text-fsu-muted px-4 py-2.5 rounded-xl text-sm">
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom nav */}
       <div className="px-6 py-4 flex gap-3 justify-center no-print">

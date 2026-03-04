@@ -2,14 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
+import { STATUS_STYLE } from '../lib/statusStyles';
 
 const supabase = getSupabaseClient();
-
-const STATUS_STYLE = {
-  draft:     { bg: '#fef3c7', color: '#d97706' },
-  ready:     { bg: '#dcfce7', color: '#16a34a' },
-  completed: { bg: '#dbeafe', color: '#2563eb' },
-};
 
 // ─── Admin / Lead Facilitator view ───────────────────────────
 function PlannerDashboard({ profile, isAdmin }) {

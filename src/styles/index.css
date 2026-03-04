@@ -38,7 +38,12 @@
   .print-table { width: 100%; border-collapse: collapse; }
   .print-table td, .print-table th { border: 1px solid #ccc; padding: 8px; text-align: left; }
   .print-table th { background: #f5f2ee; font-weight: 600; }
+  /* Theory export: always show theory blocks */
+  .theory-section { page-break-before: always; }
 }
 body.hide-facilitator-fields .facilitator-only {
   display: none !important;
 }
+/* Theory view — shown only when printing theory export */
+body.print-theory .theory-section { display: block !important; }
+.theory-section { display: none; }
