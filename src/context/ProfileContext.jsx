@@ -11,7 +11,7 @@ export function ProfileProvider({ session, children }) {
     const supabase = getSupabaseClient();
     supabase
       .from('profiles')
-      .select('name, role, email')
+      .select('id, name, role, email')
       .eq('id', session.user.id)
       .single()
       .then(({ data }) => {
@@ -20,8 +20,18 @@ export function ProfileProvider({ session, children }) {
       });
   }, [session.user.id]);
 
+  const role = profile?.role;
+
   return (
-    <ProfileContext.Provider value={{ profile, loading, isAdmin: profile?.role === 'admin' }}>
+    <ProfileContext.Provider value={{
+      profile,
+      loading,
+      isAdmin:                role === 'admin',
+      isLeadFacilitator:      role === 'lead_facilitator',
+      isAssistantFacilitator: role === 'assistant_facilitator',
+      canPlan:                role === 'admin' || role === 'lead_facilitator',
+      canAdmin:               role === 'admin',
+    }}>
       {children}
     </ProfileContext.Provider>
   );
