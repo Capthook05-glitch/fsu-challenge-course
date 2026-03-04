@@ -1,26 +1,52 @@
 import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthForm } from './components/auth/AuthForm';
 import { AppShell } from './pages/AppShell';
+import { Dashboard } from './pages/Dashboard';
+import { GameCatalog } from './pages/GameCatalog';
+import { SessionList } from './pages/SessionList';
+import { SessionPlanner } from './pages/SessionPlanner';
+import { FacilitationMode } from './pages/FacilitationMode';
+import { FeedbackForm } from './pages/FeedbackForm';
+import { AdminPanel } from './pages/AdminPanel';
+import { ProfileProvider } from './context/ProfileContext';
 import { getSupabaseClient, missingSupabaseEnv } from './lib/supabase';
 
+function AuthGate({ session }) {
+  if (!session) {
+    return (
+      <div className="mx-auto flex min-h-[85vh] max-w-5xl items-center justify-center">
+        <AuthForm />
+      </div>
+    );
+  }
+  return (
+    <ProfileProvider session={session}>
+      <Routes>
+        <Route path="/" element={<AppShell />}>
+          <Route index element={<Dashboard />} />
+          <Route path="games" element={<GameCatalog />} />
+          <Route path="sessions" element={<SessionList />} />
+          <Route path="sessions/:id" element={<SessionPlanner />} />
+          <Route path="admin" element={<AdminPanel />} />
+        </Route>
+        <Route path="/sessions/:id/facilitate" element={<FacilitationMode />} />
+      </Routes>
+    </ProfileProvider>
+  );
+}
+
 export default function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(undefined);
 
   useEffect(() => {
-    if (missingSupabaseEnv) {
-      return undefined;
-    }
+    if (missingSupabaseEnv) return undefined;
 
     const supabase = getSupabaseClient();
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session ?? null));
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession ?? null);
     });
 
     return () => subscription.unsubscribe();
@@ -41,15 +67,22 @@ export default function App() {
     );
   }
 
+  if (session === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-fsu-navy text-slate-400">
+        Loading…
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-fsu-navy p-4 sm:p-8">
-      {session ? (
-        <AppShell session={session} />
-      ) : (
-        <div className="mx-auto flex min-h-[85vh] max-w-5xl items-center justify-center">
-          <AuthForm />
-        </div>
-      )}
+    <div className="min-h-screen bg-fsu-navy">
+      <BrowserRouter>
+        <Routes>
+          <Route path="/feedback/:sessionId" element={<FeedbackForm />} />
+          <Route path="/*" element={<AuthGate session={session} />} />
+        </Routes>
+      </BrowserRouter>
     </div>
   );
 }
