@@ -9,7 +9,7 @@ const supabase = getSupabaseClient();
 const EMPTY_COURSE = { name: '', description: '', goals: [], is_public: false };
 
 export default function Courses() {
-  const { profile, canPlan } = useProfile();
+  const { profile, canPlan, isAdmin } = useProfile();
   const [courses, setCourses]       = useState([]);
   const [sessions, setSessions]     = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -27,10 +27,9 @@ export default function Courses() {
     setLoading(true);
     const [courseRes, sessRes] = await Promise.all([
       supabase.from('courses').select('*').order('created_at', { ascending: false }),
-      supabase.from('sessions').select('id,name,status')
-        .eq(canPlan && !profile?.role === 'admin' ? 'owner_id' : 'is_archived', canPlan ? profile.id : false)
-        .eq('is_archived', false)
-        .order('name'),
+      isAdmin
+        ? supabase.from('sessions').select('id,name,status').eq('is_archived', false).order('name')
+        : supabase.from('sessions').select('id,name,status').eq('owner_id', profile.id).eq('is_archived', false).order('name'),
     ]);
     setCourses(courseRes.data || []);
     setSessions(sessRes.data || []);

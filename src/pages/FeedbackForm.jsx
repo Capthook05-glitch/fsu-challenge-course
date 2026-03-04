@@ -46,12 +46,13 @@ export default function FeedbackForm() {
     e.preventDefault();
     if (!rating) { setError('Please select a rating.'); return; }
     const { error: err } = await supabase.from('session_feedback').insert({
-      session_id: sessionId,
+      session_id:   sessionId,
       rating,
-      what_worked: whatWorked,
-      what_improve: whatImprove,
-      group_size: groupSize ? parseInt(groupSize) : null,
-      // Store extra fields in what_worked if no dedicated columns
+      what_worked:  whatWorked  || null,
+      what_improve: whatImprove || null,
+      group_size:   groupSize ? parseInt(groupSize) : null,
+      takeaway:     takeaway  || null,
+      goal_next:    goalNext  || null,
     });
     if (err) { setError('Something went wrong. Please try again.'); return; }
     setSubmitted(true);

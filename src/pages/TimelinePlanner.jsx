@@ -288,7 +288,7 @@ export default function TimelinePlanner() {
       suggestions.push({ icon: '▶', text: 'Starting with an energizer or low-risk activity helps warm up the group.' });
     }
     const totalMin = blocks.reduce((s, b) => s + b.duration_min, 0);
-    if (totalMin > 0 && debriefCnt / gameCount < 0.3) {
+    if (totalMin > 0 && gameCount > 0 && debriefCnt / gameCount < 0.3) {
       suggestions.push({ icon: '🗣', text: `Debrief ratio is low (${debriefCnt}:${gameCount}). Aim for at least one debrief per 2-3 activities.` });
     }
     if (gameCount === 0) {

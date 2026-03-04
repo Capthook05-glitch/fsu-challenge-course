@@ -57,7 +57,7 @@ export default function Analytics() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [isAdmin, profile?.id]);
 
   const stats = useMemo(() => {
     const gameMap = Object.fromEntries(games.map(g => [g.id, g]));

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { GoalTag } from '../components/ui/GoalTag';
 import { useProfile } from '../context/ProfileContext';
@@ -14,7 +14,6 @@ function fmt(s) {
 
 export default function FacilitationMode() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { profile } = useProfile();
   const [session, setSession] = useState(null);
   const [blocks, setBlocks] = useState([]);

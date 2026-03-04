@@ -3,6 +3,11 @@
 --                Curriculum, Analytics helpers
 -- =============================================================
 
+-- P17: Participant portal — add takeaway and goal_next to session_feedback
+ALTER TABLE session_feedback
+  ADD COLUMN IF NOT EXISTS takeaway  text,
+  ADD COLUMN IF NOT EXISTS goal_next text;
+
 -- P11: Facilitator assignment per block
 ALTER TABLE timeline_blocks
   ADD COLUMN IF NOT EXISTS assigned_facilitator text;
