@@ -146,7 +146,7 @@ with check (auth.uid() = id or public.is_admin());
 
 -- games policies
 create policy "Anyone authenticated can view active games" on public.games
-for select using ((is_active = true and auth.role() = 'authenticated') or public.is_admin());
+for select using ((is_active = true and auth.uid() is not null) or public.is_admin());
 
 create policy "Only admins can insert games" on public.games
 for insert with check (public.is_admin());
