@@ -13,6 +13,7 @@ export function AuthForm() {
     setLoading(true);
     setMessage('');
 
+    const supabase = getSupabaseClient();
     const action =
       mode === 'signin'
         ? supabase.auth.signInWithPassword({ email, password })

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getSupabaseClient } from '../lib/supabase';
-import { supabase } from '../lib/supabase';
 
 export function AppShell({ session }) {
   const [profile, setProfile] = useState(null);
