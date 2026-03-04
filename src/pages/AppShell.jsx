@@ -1,29 +1,15 @@
-import { useEffect, useState } from 'react';
+import { Outlet, NavLink } from 'react-router-dom';
+import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
 
-export function AppShell({ session }) {
-  const [profile, setProfile] = useState(null);
-  const [error, setError] = useState('');
+const navLinks = [
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/games', label: 'Game Catalog' },
+  { to: '/sessions', label: 'My Sessions' },
+];
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      const supabase = getSupabaseClient();
-      const { data, error: profileError } = await supabase
-        .from('profiles')
-        .select('name, role, email')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profileError) {
-        setError('Could not load profile. Run SQL migration first.');
-        return;
-      }
-
-      setProfile(data);
-    };
-
-    loadProfile();
-  }, [session.user.id]);
+export function AppShell() {
+  const { profile, isAdmin } = useProfile();
 
   const signOut = async () => {
     const supabase = getSupabaseClient();
@@ -31,36 +17,100 @@ export function AppShell({ session }) {
   };
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <nav className="mb-8 flex items-center justify-between rounded-xl border border-fsu-gold/30 bg-white/5 p-4">
-        <h1 className="text-xl font-semibold text-fsu-gold">FSU Challenge Course Toolkit</h1>
-        <button className="rounded-md bg-slate-800 px-3 py-2 text-sm" onClick={signOut}>
-          Sign out
-        </button>
-      </nav>
-
-      <section className="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
-        <h2 className="text-2xl font-semibold">You are connected 🎉</h2>
-        <p className="mt-2 text-slate-300">This starter build confirms React + Supabase auth + profile loading.</p>
-
-        <div className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-          <InfoRow label="User ID" value={session.user.id} />
-          <InfoRow label="Email" value={profile?.email ?? session.user.email} />
-          <InfoRow label="Name" value={profile?.name ?? 'Not set'} />
-          <InfoRow label="Role" value={profile?.role ?? 'Unknown'} />
+    <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <aside className="hidden w-56 flex-shrink-0 flex-col border-r border-slate-800 bg-slate-950 md:flex">
+        <div className="px-5 py-5">
+          <span className="font-semibold text-fsu-gold text-sm leading-tight">FSU Challenge Course</span>
         </div>
 
-        {error && <p className="mt-4 rounded bg-red-950/60 p-3 text-sm text-red-300">{error}</p>}
-      </section>
-    </main>
-  );
-}
+        <nav className="flex-1 px-2 py-2 space-y-0.5">
+          {navLinks.map(({ to, label, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `block rounded-md px-3 py-2 text-sm transition-colors ${
+                  isActive
+                    ? 'bg-fsu-garnet/20 text-fsu-gold font-medium'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `block rounded-md px-3 py-2 text-sm transition-colors ${
+                  isActive
+                    ? 'bg-fsu-garnet/20 text-fsu-gold font-medium'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                }`
+              }
+            >
+              Admin
+            </NavLink>
+          )}
+        </nav>
 
-function InfoRow({ label, value }) {
-  return (
-    <div className="rounded-md border border-slate-700 bg-slate-800/60 p-3">
-      <p className="text-xs uppercase text-slate-400">{label}</p>
-      <p className="mt-1 break-all text-slate-100">{value}</p>
+        <div className="border-t border-slate-800 p-4">
+          <p className="text-xs text-slate-400 truncate">{profile?.name || profile?.email}</p>
+          <p className="text-xs text-slate-600 capitalize">{profile?.role}</p>
+          <button
+            onClick={signOut}
+            className="mt-3 w-full rounded-md bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700"
+          >
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile top bar */}
+      <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-slate-800 bg-slate-950 px-4 py-3 md:hidden">
+        <span className="font-semibold text-fsu-gold text-sm">FSU Challenge Course</span>
+        <button onClick={signOut} className="text-xs text-slate-400 hover:text-white">Sign out</button>
+      </div>
+
+      {/* Mobile nav row */}
+      <div className="fixed bottom-0 inset-x-0 z-40 flex border-t border-slate-800 bg-slate-950 md:hidden">
+        {navLinks.map(({ to, label, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              `flex-1 py-3 text-center text-xs transition-colors ${
+                isActive ? 'text-fsu-gold' : 'text-slate-500 hover:text-slate-200'
+              }`
+            }
+          >
+            {label}
+          </NavLink>
+        ))}
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `flex-1 py-3 text-center text-xs transition-colors ${
+                isActive ? 'text-fsu-gold' : 'text-slate-500 hover:text-slate-200'
+              }`
+            }
+          >
+            Admin
+          </NavLink>
+        )}
+      </div>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto pt-14 pb-16 md:pt-0 md:pb-0">
+        <div className="mx-auto max-w-4xl px-4 py-8">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }
