@@ -13,7 +13,11 @@ const ROLE_LABEL = {
 
 const NAV_ITEMS = [
   { to: '/games',     label: 'Catalog',          roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/sessions',  label: 'Session Planner',  roles: ['admin','lead_facilitator'] },
+  { to: '/sessions',  label: 'Planner',          roles: ['admin','lead_facilitator'] },
+  { to: '/templates', label: 'Blueprints',       roles: ['admin','lead_facilitator'] },
+  { to: '/courses',   label: 'Curriculum',      roles: ['admin','lead_facilitator'] },
+  { to: '/inventory', label: 'Inventory',        roles: ['admin','lead_facilitator'] },
+  { to: '/incidents', label: 'Safety',           roles: ['admin','lead_facilitator'] },
   { to: '/',          label: 'Dashboard',        roles: ['admin','lead_facilitator','assistant_facilitator'] },
 ];
 

@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GoalTag } from '../ui/GoalTag';
+import { BlockComments } from './BlockComments';
 
 export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) {
+  const [showComments, setShowComments] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id, disabled: readOnly });
 
   const style = {
@@ -59,6 +62,11 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
                 <span className="material-symbols-outlined text-sm opacity-60">location_on</span> {block.location}
              </span>
           )}
+          {block.assigned_facilitator && (
+             <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm opacity-60">person</span> {block.assigned_facilitator}
+             </span>
+          )}
         </div>
 
         {(block.notes || game?.description) && (
@@ -70,14 +78,26 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
         )}
       </div>
 
-      {!readOnly && (
-        <div className="flex md:flex-col items-center gap-1 shrink-0 self-end md:self-center">
+      <div className="flex md:flex-col items-center gap-1 shrink-0 self-end md:self-center">
+        {!readOnly && (
           <button
             onClick={() => onEdit(block)}
             className="p-2 text-slate-400 hover:text-navy-900 transition-colors"
           >
             <span className="material-symbols-outlined text-xl">edit</span>
           </button>
+        )}
+        <button
+          onClick={() => setShowComments(!showComments)}
+          className={`p-2 transition-colors ${showComments ? 'text-primary' : 'text-slate-300 hover:text-slate-500'}`}
+        >
+          <span className="material-symbols-outlined text-xl">comment</span>
+        </button>
+      </div>
+
+      {showComments && (
+        <div className="w-full md:pl-16">
+           <BlockComments blockId={block.id} sessionId={block.session_id} />
         </div>
       )}
     </div>

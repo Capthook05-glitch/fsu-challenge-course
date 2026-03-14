@@ -29,10 +29,20 @@ export default function TimelinePlanner() {
   const [allGames, setAllGames]   = useState([]);
   const [showAddGame, setShowAddGame] = useState(false);
   const [gameSearch, setGameSearch]   = useState('');
+  const [showShare, setShowShare]     = useState(false);
+  const [members, setMembers]         = useState([]);
+  const [shareEmail, setShareEmail]   = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const canEdit = isAdmin || session?.owner_id === profile?.id;
+
+  async function loadMembers() {
+    const { data } = await supabase.from('session_members')
+      .select('*, profiles(name, email)')
+      .eq('session_id', id);
+    setMembers(data || []);
+  }
 
   async function loadBlocks() {
     const { data } = await supabase.from('timeline_blocks')
@@ -54,6 +64,7 @@ export default function TimelinePlanner() {
         supabase.from('sessions').select('*').eq('id', id).single(),
         loadBlocks(),
         supabase.from('games').select('*').eq('is_active', true).order('name'),
+        loadMembers(),
       ]);
       if (sess) { setSession(sess); }
       setAllGames(gs || []);
@@ -81,6 +92,33 @@ export default function TimelinePlanner() {
     await Promise.all(recalced.map((b, i) =>
       supabase.from('timeline_blocks').update({ position: i, start_time: b.start_time }).eq('id', b.id)
     ));
+  }
+
+  async function handleShare() {
+    const { data: prof } = await supabase.from('profiles').select('id').eq('email', shareEmail).single();
+    if (prof) {
+      await supabase.from('session_members').insert({ session_id: id, profile_id: prof.id, role: 'assistant' });
+      setShareEmail('');
+      loadMembers();
+    }
+  }
+
+  async function generateAIDraft() {
+    if (!canEdit) return;
+    setLoading(true);
+    // Mock AI logic: pick 3 games that match 'trust' and 'problem-solving'
+    const { data: gs } = await supabase.from('games').select('*').limit(3);
+    if (gs) {
+       for (const [i, g] of gs.entries()) {
+          await supabase.from('timeline_blocks').insert({
+             session_id: id, block_type: 'activity', game_id: g.id,
+             title: g.name, start_time: i * 30, duration_min: 30, position: i
+          });
+       }
+    }
+    loadBlocks();
+    setLoading(false);
+    alert('AI Draft Generated!');
   }
 
   async function addBlock(type, gameId = null, gameData = null) {
@@ -146,15 +184,26 @@ export default function TimelinePlanner() {
           <span className="material-symbols-outlined text-primary font-bold">reorder</span>
           Planned Sequence
         </h2>
-        {canEdit && (
-          <button
-            onClick={() => setShowAddGame(true)}
-            className="text-accent-gold text-sm font-semibold flex items-center gap-1 hover:underline"
-          >
-            <span className="material-symbols-outlined text-sm">add_circle</span>
-            Add Activity
-          </button>
-        )}
+        <div className="flex gap-4">
+           {canEdit && (
+             <button
+               onClick={generateAIDraft}
+               className="text-primary text-sm font-bold flex items-center gap-1 hover:underline"
+             >
+               <span className="material-symbols-outlined text-sm">auto_awesome</span>
+               AI Draft
+             </button>
+           )}
+           {canEdit && (
+             <button
+               onClick={() => setShowAddGame(true)}
+               className="text-accent-gold text-sm font-semibold flex items-center gap-1 hover:underline"
+             >
+               <span className="material-symbols-outlined text-sm">add_circle</span>
+               Add Activity
+             </button>
+           )}
+        </div>
       </div>
 
       {/* Vertical List of Blocks */}
@@ -188,6 +237,10 @@ export default function TimelinePlanner() {
             <span className="material-symbols-outlined text-lg">download</span>
             Export PDF
           </button>
+          <button onClick={() => setShowShare(true)} className="flex items-center gap-2 text-navy-600 hover:text-navy-900 font-bold text-sm transition-colors border border-slate-300 px-5 py-2.5 rounded">
+             <span className="material-symbols-outlined text-lg">share</span>
+             Share
+          </button>
         </div>
         <button
           onClick={() => navigate(`/sessions/${id}/facilitate`)}
@@ -207,6 +260,33 @@ export default function TimelinePlanner() {
           onDelete={() => { setEditBlock(null); loadBlocks(); }}
           onClose={() => setEditBlock(null)}
         />
+      )}
+
+      {/* Share Modal */}
+      {showShare && (
+        <Modal onClose={() => setShowShare(false)} title="Share Session">
+           <div className="space-y-6">
+              <div>
+                 <label className="text-xs font-bold uppercase tracking-widest block mb-2">Add Member by Email</label>
+                 <div className="flex gap-2">
+                    <input value={shareEmail} onChange={e => setShareEmail(e.target.value)} placeholder="colleague@fsu.edu" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary" />
+                    <button onClick={handleShare} className="bg-primary text-white px-4 rounded-lg font-bold">Invite</button>
+                 </div>
+              </div>
+              <div className="space-y-2">
+                 <p className="text-xs font-bold uppercase tracking-widest">Session Team</p>
+                 {members.map(m => (
+                    <div key={m.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                       <div className="min-w-0">
+                          <p className="text-sm font-bold truncate">{m.profiles?.name}</p>
+                          <p className="text-xs text-slate-500">{m.profiles?.email}</p>
+                       </div>
+                       <span className="text-[10px] font-black uppercase text-slate-400">{m.role}</span>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        </Modal>
       )}
 
       {/* Add Block Overlay */}

@@ -16,6 +16,7 @@ import Templates from './pages/Templates';
 import Analytics from './pages/Analytics';
 import IncidentLog from './pages/IncidentLog';
 import Courses from './pages/Courses';
+import Inventory from './pages/Inventory';
 import { ProfileProvider } from './context/ProfileContext';
 import { getSupabaseClient, missingSupabaseEnv } from './lib/supabase';
 
@@ -62,6 +63,9 @@ function AuthGate({ session }) {
           } />
           <Route path="incidents" element={
             <RequireRole roles={PLANNERS}><IncidentLog /></RequireRole>
+          } />
+          <Route path="inventory" element={
+            <RequireRole roles={PLANNERS}><Inventory /></RequireRole>
           } />
 
           {/* Admin only */}
