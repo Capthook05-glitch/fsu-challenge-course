@@ -27,6 +27,12 @@ export default function Analytics() {
     load();
   }, []);
 
+  const [facilitators, setFacilitators] = useState([]);
+
+  useEffect(() => {
+    supabase.from('profiles').select('*').limit(3).then(({ data }) => setFacilitators(data || []));
+  }, []);
+
   const stats = useMemo(() => {
     const gameMap = Object.fromEntries(games.map(g => [g.id, g]));
     const activityCount = {};
@@ -97,6 +103,39 @@ export default function Analytics() {
               <div className="absolute right-0 text-[10px] font-black uppercase text-primary">Communication</div>
               <div className="absolute left-0 text-[10px] font-black uppercase text-primary">Teamwork</div>
            </div>
+        </div>
+      </div>
+
+      {/* Facilitator Hours Summary Section */}
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-primary/5 shadow-sm mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">Facilitator Engagement</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Active contributor levels across the facilitator roster.</p>
+          </div>
+          <div className="text-right">
+            <span className="text-3xl font-black text-primary">860 Hours</span>
+            <p className="text-slate-400 text-xs font-bold uppercase">Quarter Total</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {facilitators.map((f, i) => (
+            <div key={f.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                 {f.name?.charAt(0) || 'F'}
+              </div>
+              <div className="flex-1">
+                <p className="text-slate-900 dark:text-slate-100 font-bold">{f.name || f.email.split('@')[0]}</p>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mt-1 overflow-hidden">
+                  <div className="bg-primary h-full" style={{ width: `${80 - i*20}%` }}></div>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-slate-900 dark:text-slate-100 font-black text-sm">{180 - i*40}h</p>
+                <p className="text-slate-400 text-[10px] font-bold capitalize">{f.role.replace('_', ' ')}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

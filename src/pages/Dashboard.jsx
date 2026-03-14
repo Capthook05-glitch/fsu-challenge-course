@@ -39,9 +39,21 @@ export default function Dashboard() {
   return (
     <div className="flex-1 overflow-y-auto p-12 bg-background-light dark:bg-background-dark font-display">
       {/* Page Title */}
-      <div className="mb-12 border-b border-slate-100 dark:border-slate-800 pb-8">
-        <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.name || profile.email}</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Tracking performance across the FSU Challenge Course program.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-slate-100 dark:border-slate-800 pb-8">
+        <div>
+          <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.name || profile.email}</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Tracking performance across the FSU Challenge Course program.</p>
+        </div>
+        <div className="flex gap-3">
+           <Link to="/ai-builder" className="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:brightness-110 transition-all flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">bolt</span>
+              AI Session Builder
+           </Link>
+           <Link to="/analytics" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-6 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">analytics</span>
+              Analytics
+           </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}

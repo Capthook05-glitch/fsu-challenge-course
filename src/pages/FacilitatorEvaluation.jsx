@@ -2,82 +2,67 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { stripEmojis } from '../lib/utils';
+import { useProfile } from '../context/ProfileContext';
 
 const supabase = getSupabaseClient();
 
-export default function FeedbackForm() {
-  const { sessionId } = useParams();
-  const [session, setSession]         = useState(null);
-  const [blocks, setBlocks]           = useState([]);
-  const [rating, setRating]           = useState(0);
-  const [hovered, setHovered]         = useState(0);
-  const [whatWorked, setWhatWorked]   = useState('');
-  const [whatImprove, setWhatImprove] = useState('');
-  const [takeaway, setTakeaway]       = useState('');
-  const [goalNext, setGoalNext]       = useState('');
-  const [groupSize, setGroupSize]     = useState('');
-  const [submitted, setSubmitted]     = useState(false);
-  const [error, setError]             = useState('');
-  const [activeTab, setActiveTab]     = useState('program'); // 'program' | 'feedback'
+export default function FacilitatorEvaluation() {
+  const { id } = useParams(); // Session ID
+  const { profile } = useProfile();
+  const [session, setSession]       = useState(null);
+  const [facilitators, setFacilitators] = useState([]);
+  const [targetId, setTargetId]     = useState('');
+
+  const [engagement, setEngagement] = useState(0);
+  const [safety, setSafety]         = useState(0);
+  const [goal, setGoal]             = useState(0);
+  const [notes, setNotes]           = useState('');
+  const [incidents, setIncidents]   = useState('');
+
+  const [submitted, setSubmitted]   = useState(false);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [{ data: sess }, { data: blks }] = await Promise.all([
-        supabase.from('sessions').select('id,name,notes').eq('id', sessionId).single(),
-        supabase.from('timeline_blocks')
-          .select('id,block_type,title,start_time,duration_min,location,subgroup,game_id')
-          .eq('session_id', sessionId)
-          .order('position'),
-      ]);
+      const { data: sess } = await supabase.from('sessions').select('id, name, owner_id').eq('id', id).single();
+      const { data: mems } = await supabase.from('session_members').select('profile_id, profiles(name, email)').eq('session_id', id);
+      const { data: owner } = await supabase.from('profiles').select('id, name, email').eq('id', sess?.owner_id).single();
+
       setSession(sess);
-      setBlocks(blks || []);
+
+      const allFacs = (mems || []).map(m => m.profiles);
+      if (owner && !allFacs.find(f => f.id === owner.id)) allFacs.push(owner);
+      setFacilitators(allFacs);
+      setLoading(false);
     }
     load();
-  }, [sessionId]);
-
-  function fmtTime(minutes) {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const period = h < 12 ? 'AM' : 'PM';
-    const display = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-    return `${display}:${String(m).padStart(2,'0')} ${period}`;
-  }
+  }, [id]);
 
   async function submit(e) {
     e.preventDefault();
-    if (!rating) { setError('Please select a rating.'); return; }
-    const { error: err } = await supabase.from('session_feedback').insert({
-      session_id: sessionId,
-      rating,
-      what_worked: whatWorked,
-      what_improve: whatImprove,
-      group_size: groupSize ? parseInt(groupSize) : null,
-      submitted_by: null // Participant feedback is anonymous in this portal
+    if (!targetId || !engagement || !safety || !goal) return alert('Please complete all ratings.');
+
+    await supabase.from('facilitator_evaluations').insert({
+      session_id: id,
+      facilitator_id: targetId,
+      evaluator_id: profile.id,
+      engagement_rating: engagement,
+      safety_rating: safety,
+      goal_rating: goal,
+      coaching_notes: notes,
+      incident_log: incidents
     });
-    if (err) { setError('Something went wrong. Please try again.'); return; }
     setSubmitted(true);
   }
 
-  const TYPE_LABELS = { activity: 'Activity', debrief: 'Debrief', break: 'Break', transition: 'Transition', custom: 'Block' };
-  const TYPE_COLORS = {
-    activity: '#782F40', debrief: '#2563eb', break: '#d97706', transition: '#78716C', custom: '#7c3aed',
-  };
-
   if (submitted) {
     return (
-      <div className="min-h-screen bg-fsu-white flex items-center justify-center p-4">
-        <div className="bg-fsu-surface border border-fsu-border rounded-2xl p-8 max-w-sm text-center">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-green-600 font-bold">
-            ✓
-          </div>
-          <h2 className="font-syne font-bold text-xl text-fsu-text mb-2">Thank you!</h2>
-          <p className="text-fsu-muted text-sm">Your feedback helps us improve future programs.</p>
-          {takeaway && (
-            <div className="mt-4 bg-fsu-soft border border-fsu-border rounded-xl p-3 text-left">
-              <p className="text-xs font-semibold text-fsu-muted uppercase mb-1">Your Takeaway</p>
-              <p className="text-sm text-fsu-text">{takeaway}</p>
-            </div>
-          )}
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-sm text-center shadow-lg">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-green-600 font-bold">✓</div>
+          <h2 className="font-bold text-xl mb-2">Evaluation Submitted</h2>
+          <p className="text-slate-500 text-sm">Thank you for providing professional feedback.</p>
+          <button onClick={() => window.history.back()} className="mt-6 text-primary font-bold hover:underline">Return to Session</button>
         </div>
       </div>
     );
@@ -106,15 +91,20 @@ export default function FeedbackForm() {
                   <span className="text-base font-semibold">{stripEmojis(session?.name) || 'Loading...'}</span>
                </div>
                <div className="flex flex-col border-l border-primary/10 pl-8">
-                  <span className="text-xs font-bold text-primary uppercase">Date</span>
-                  <span className="text-base font-semibold">{new Date().toLocaleDateString()}</span>
+                  <span className="text-xs font-bold text-primary uppercase">Staff Member</span>
+                  <select value={targetId} onChange={e => setTargetId(e.target.value)} className="bg-transparent font-semibold focus:outline-none">
+                     <option value="">Select Facilitator...</option>
+                     {facilitators.map(f => <option key={f.id} value={f.id}>{f.name || f.email}</option>)}
+                  </select>
                </div>
             </div>
 
             <section className="mb-10">
                <h2 className="text-xl font-bold border-b border-primary/10 pb-4 mb-6">Quantitative Assessment</h2>
                <div className="space-y-4">
-                  <RatingRow label="Group Engagement" sub="Ability to sustain participant focus" rating={rating} setRating={setRating} hovered={hovered} setHovered={setHovered} />
+                  <RatingRow label="Group Engagement" sub="Ability to sustain participant focus" rating={engagement} setRating={setEngagement} />
+                  <RatingRow label="Safety Compliance" sub="Adherence to technical protocols" rating={safety} setRating={setSafety} />
+                  <RatingRow label="Goal Achievement" sub="Meeting specific program objectives" rating={goal} setRating={setGoal} />
                </div>
             </section>
 
@@ -122,9 +112,9 @@ export default function FeedbackForm() {
                <div className="flex flex-col gap-3">
                   <label className="text-lg font-bold">Peer Feedback & Coaching Notes</label>
                   <textarea
-                    value={whatWorked} onChange={e => setWhatWorked(e.target.value)}
+                    value={notes} onChange={e => setNotes(e.target.value)}
                     className="w-full min-h-[160px] rounded-xl border border-primary/20 bg-white dark:bg-primary/5 p-4 focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="Provide constructive observations..."
+                    placeholder="Provide constructive observations for staff growth..."
                   />
                </div>
                <div className="flex flex-col gap-3">
@@ -133,21 +123,20 @@ export default function FeedbackForm() {
                      <span className="text-xs font-semibold text-slate-400">LEAVE BLANK IF NONE</span>
                   </div>
                   <textarea
-                    value={whatImprove} onChange={e => setWhatImprove(e.target.value)}
+                    value={incidents} onChange={e => setIncidents(e.target.value)}
                     className="w-full min-h-[120px] rounded-xl border border-primary/20 bg-white dark:bg-primary/5 p-4 focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="Detail any technical issues or concerns..."
+                    placeholder="Detail any technical issues, minor injuries, or equipment concerns..."
                   />
                </div>
 
-               <div className="flex flex-col items-center border-t border-primary/10 pt-10">
+               <div className="flex flex-col items-center border-t border-primary/10 pt-10 pb-20">
                   <div className="flex items-center gap-2 mb-6 text-slate-500 text-sm italic">
                      <span className="material-symbols-outlined text-sm">info</span>
-                     This review will be shared with the program director.
+                     This review will be shared with the facilitator and program director.
                   </div>
                   <button type="submit" className="bg-primary hover:bg-primary/90 text-white font-bold py-4 px-12 rounded-xl text-lg shadow-lg transition-all w-full md:w-auto">
                      Submit Review
                   </button>
-                  {error && <p className="text-red-600 mt-4">{error}</p>}
                </div>
             </form>
          </div>
@@ -156,12 +145,13 @@ export default function FeedbackForm() {
   );
 }
 
-function RatingRow({ label, sub, rating, setRating, hovered, setHovered }) {
+function RatingRow({ label, sub, rating, setRating }) {
+  const [hovered, setHovered] = useState(0);
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white dark:bg-primary/10 rounded-lg border border-primary/5">
       <div className="flex items-center gap-4 mb-3 md:mb-0">
         <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
-          <span className="material-symbols-outlined">groups</span>
+          <span className="material-symbols-outlined">{label.includes('Safety') ? 'verified_user' : label.includes('Goal') ? 'flag' : 'groups'}</span>
         </div>
         <div>
           <p className="font-bold">{label}</p>
