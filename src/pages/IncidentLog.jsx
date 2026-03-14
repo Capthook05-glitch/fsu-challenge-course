@@ -128,6 +128,73 @@ export default function IncidentLog() {
         </Modal>
       )}
 
+      {/* Expanded Incident Detail */}
+      {expanded && (() => {
+        const inc = incidents.find(i => i.id === expanded);
+        if (!inc) return null;
+        const sev = SEVERITY[inc.severity] || SEVERITY.near_miss;
+        return (
+          <div className="mb-6 p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide" style={{ background: sev.bg, color: sev.color }}>
+                  {sev.label}
+                </span>
+                <span className="text-sm text-slate-400">{new Date(inc.reported_at).toLocaleString()}</span>
+              </div>
+              <button onClick={() => setExpanded(null)} className="text-slate-400 hover:text-navy">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">What Happened</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{inc.what_happened}</p>
+                </div>
+                {inc.contributing_factors && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Contributing Factors</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{inc.contributing_factors}</p>
+                  </div>
+                )}
+                {inc.immediate_action && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Immediate Action Taken</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{inc.immediate_action}</p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Reported By</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">{inc.profiles?.name || 'Anonymous'}</p>
+                </div>
+                {inc.sessions?.name && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Session</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{inc.sessions.name}</p>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Follow-Up Required</p>
+                  <button onClick={() => toggleFollowUp(inc)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${inc.follow_up_needed ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {inc.follow_up_needed ? 'Yes' : 'No'}
+                  </button>
+                </div>
+                {inc.follow_up_notes && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Follow-Up Notes</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{inc.follow_up_notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {loading ? (
         <p className="text-slate-400">Loading incidents…</p>
       ) : incidents.length === 0 ? (
