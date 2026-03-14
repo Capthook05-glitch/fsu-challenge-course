@@ -12,11 +12,13 @@ const ROLE_LABEL = {
 };
 
 const NAV_ITEMS = [
-  { to: '/',          label: 'Dashboard',        roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/games',     label: 'Catalog',          roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/sessions',  label: 'Session Planner',  roles: ['admin','lead_facilitator'] },
-  { to: '/courses',   label: 'Curriculum',      roles: ['admin','lead_facilitator'] },
-  { to: '/inventory', label: 'Inventory & Safety', roles: ['admin','lead_facilitator'] },
+  { to: '/games',          label: 'Catalog',          roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/sessions',       label: 'Planner',          roles: ['admin','lead_facilitator'] },
+  { to: '/knowledge-base', label: 'Knowledge Base',   roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/courses',        label: 'Curriculum',       roles: ['admin','lead_facilitator'] },
+  { to: '/inventory',      label: 'Inventory',        roles: ['admin','lead_facilitator'] },
+  { to: '/incidents',      label: 'Safety',           roles: ['admin','lead_facilitator'] },
+  { to: '/',               label: 'Dashboard',        roles: ['admin','lead_facilitator','assistant_facilitator'] },
 ];
 
 export default function AppShell() {
@@ -110,6 +112,7 @@ export default function AppShell() {
                     <p className="text-sm font-bold truncate">{profile?.name || profile?.email}</p>
                     <p className="text-xs text-slate-400">{ROLE_LABEL[role]}</p>
                   </div>
+                  <Link to={`/profiles/${profile?.id}`} className="block px-4 py-2 text-sm text-slate-600 hover:bg-primary/5">My Profile</Link>
                   <button
                     onClick={handleSignOut}
                     className="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-slate-100 hover:bg-primary/10 transition-colors"

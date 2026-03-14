@@ -8,7 +8,12 @@ import GameCatalog from './pages/GameCatalog';
 import SessionList from './pages/SessionList';
 import TimelinePlanner from './pages/TimelinePlanner';
 import FacilitationMode from './pages/FacilitationMode';
-import FeedbackForm from './pages/FeedbackForm';
+import FacilitatorEvaluation from './pages/FacilitatorEvaluation';
+import ParticipantFeedback from './pages/ParticipantFeedback';
+import AISessionBuilder from './pages/AISessionBuilder';
+import FacilitatorProfile from './pages/FacilitatorProfile';
+import KnowledgeBase from './pages/KnowledgeBase';
+import SessionScript from './pages/SessionScript';
 import AdminPanel from './pages/AdminPanel';
 import GroupProfiles from './pages/GroupProfiles';
 import SiteProfiles from './pages/SiteProfiles';
@@ -38,9 +43,13 @@ function AuthGate({ session }) {
           {/* All authenticated roles */}
           <Route index element={<Dashboard />} />
           <Route path="games" element={<GameCatalog />} />
+          <Route path="knowledge-base" element={<KnowledgeBase />} />
+          <Route path="profiles/:id" element={<FacilitatorProfile />} />
 
           {/* Session detail — all roles can view; read-only enforced inside component */}
           <Route path="sessions/:id" element={<TimelinePlanner />} />
+          <Route path="sessions/:id/script" element={<SessionScript />} />
+          <Route path="sessions/:id/evaluate" element={<FacilitatorEvaluation />} />
 
           {/* Planners only (admin + lead_facilitator) */}
           <Route path="sessions" element={
@@ -66,6 +75,9 @@ function AuthGate({ session }) {
           } />
           <Route path="inventory" element={
             <RequireRole roles={PLANNERS}><Inventory /></RequireRole>
+          } />
+          <Route path="ai-builder" element={
+            <RequireRole roles={PLANNERS}><AISessionBuilder /></RequireRole>
           } />
 
           {/* Admin only */}
@@ -113,7 +125,7 @@ export default function App() {
     <div className="min-h-screen bg-fsu-white">
       <BrowserRouter>
         <Routes>
-          <Route path="/feedback/:sessionId" element={<FeedbackForm />} />
+          <Route path="/feedback/:sessionId" element={<ParticipantFeedback />} />
           <Route path="/*" element={<AuthGate session={session} />} />
         </Routes>
       </BrowserRouter>

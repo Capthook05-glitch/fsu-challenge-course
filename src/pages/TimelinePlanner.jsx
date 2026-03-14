@@ -252,13 +252,13 @@ export default function TimelinePlanner() {
         </h2>
         <div className="flex gap-4">
            {canEdit && (
-             <button
-               onClick={generateAIDraft}
+             <Link
+               to="/ai-builder"
                className="text-primary text-sm font-bold flex items-center gap-1 hover:underline"
              >
                <span className="material-symbols-outlined text-sm">auto_awesome</span>
-               AI Draft
-             </button>
+               AI Builder
+             </Link>
            )}
            {canEdit && (
              <button
@@ -299,6 +299,10 @@ export default function TimelinePlanner() {
       {/* Footer Actions */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-slate-200 pt-8 pb-16">
         <div className="flex gap-4 order-2 sm:order-1">
+          <Link to={`/sessions/${id}/script`} className="flex items-center gap-2 text-primary hover:bg-primary hover:text-white font-bold text-sm transition-all border border-primary px-5 py-2.5 rounded">
+            <span className="material-symbols-outlined text-lg">description</span>
+            View Script
+          </Link>
           <button onClick={() => window.print()} className="flex items-center gap-2 text-primary hover:bg-primary hover:text-white font-bold text-sm transition-all border border-primary px-5 py-2.5 rounded">
             <span className="material-symbols-outlined text-lg">download</span>
             Export PDF
