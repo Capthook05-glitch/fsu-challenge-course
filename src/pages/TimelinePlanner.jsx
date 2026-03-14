@@ -149,7 +149,27 @@ export default function TimelinePlanner() {
     setShowAddGame(false); setGameSearch('');
   }
 
-  if (loading) return <div className="p-10 text-slate-400">Loading planner...</div>;
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Loading Session Plan...</p>
+      </div>
+    </div>
+  );
+
+  if (!session) return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] p-12 text-center">
+       <div className="size-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+          <span className="material-symbols-outlined text-slate-300 text-4xl">search_off</span>
+       </div>
+       <h2 className="text-3xl font-black text-navy-deep tracking-tight mb-2">Session Not Found</h2>
+       <p className="text-slate-500 max-w-md mb-8">The session you are looking for might have been deleted or moved. Double check the URL and try again.</p>
+       <Link to="/sessions" className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20">
+          Back to Sessions
+       </Link>
+    </div>
+  );
 
   return (
     <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full px-4 md:px-10 py-10 bg-background-light min-h-screen font-display">
