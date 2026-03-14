@@ -1,39 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
-import { GOAL_META } from '../lib/goalMeta';
 
 const supabase = getSupabaseClient();
-
-function BarChart({ data, colorKey }) {
-  const max = Math.max(...data.map(d => d.value), 1);
-  return (
-    <div className="space-y-2">
-      {data.map(d => (
-        <div key={d.label} className="flex items-center gap-3">
-          <span className="text-xs text-fsu-muted w-32 truncate flex-shrink-0">{d.label}</span>
-          <div className="flex-1 bg-fsu-soft rounded-full h-2.5 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${(d.value / max) * 100}%`, background: d.color || '#782F40' }}
-            />
-          </div>
-          <span className="text-xs font-semibold text-fsu-text w-6 text-right">{d.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub }) {
-  return (
-    <div className="bg-fsu-surface border border-fsu-border rounded-xl p-4">
-      <p className="text-xs text-fsu-muted mb-1">{label}</p>
-      <p className="font-syne font-bold text-2xl text-fsu-garnet">{value}</p>
-      {sub && <p className="text-xs text-fsu-faint mt-0.5">{sub}</p>}
-    </div>
-  );
-}
 
 export default function Analytics() {
   const { profile, isAdmin } = useProfile();
@@ -45,11 +14,9 @@ export default function Analytics() {
   useEffect(() => {
     async function load() {
       const [sessRes, blockRes, gameRes] = await Promise.all([
-        isAdmin
-          ? supabase.from('sessions').select('id,status,created_at,owner_id')
-          : supabase.from('sessions').select('id,status,created_at,owner_id').eq('owner_id', profile.id),
+        supabase.from('sessions').select('*, profiles(name, email)').order('updated_at', { ascending: false }).limit(10),
         supabase.from('timeline_blocks').select('id,session_id,block_type,game_id,duration_min'),
-        supabase.from('games').select('id,name,goals,physical_intensity'),
+        supabase.from('games').select('id,name,goals'),
       ]);
       setSessions(sessRes.data || []);
       setBlocks(blockRes.data || []);
@@ -61,126 +28,98 @@ export default function Analytics() {
 
   const stats = useMemo(() => {
     const gameMap = Object.fromEntries(games.map(g => [g.id, g]));
-
-    // Session status breakdown
-    const byStatus = { draft: 0, ready: 0, completed: 0 };
-    sessions.forEach(s => { byStatus[s.status] = (byStatus[s.status] || 0) + 1; });
-
-    // Block type breakdown
-    const byType = {};
-    blocks.forEach(b => { byType[b.block_type] = (byType[b.block_type] || 0) + 1; });
-
-    // Goal coverage across all sessions
-    const goalCount = {};
-    blocks.forEach(b => {
-      if (b.game_id && gameMap[b.game_id]?.goals) {
-        gameMap[b.game_id].goals.forEach(g => {
-          goalCount[g] = (goalCount[g] || 0) + 1;
-        });
-      }
-    });
-
-    // Top activities by usage
     const activityCount = {};
     blocks.filter(b => b.game_id).forEach(b => {
       const name = gameMap[b.game_id]?.name || 'Unknown';
       activityCount[name] = (activityCount[name] || 0) + 1;
     });
-    const topActivities = Object.entries(activityCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([label, value]) => ({ label, value }));
+    const mostUsed = Object.entries(activityCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
-    // Total facilitated time
-    const totalMin = blocks.reduce((s, b) => s + (b.duration_min || 0), 0);
-    const completedSessions = sessions.filter(s => s.status === 'completed').length;
-
-    // Goal chart data
-    const goalData = Object.entries(goalCount)
-      .sort((a, b) => b[1] - a[1])
-      .map(([key, value]) => ({
-        label: GOAL_META[key]?.label || key,
-        value,
-        color: GOAL_META[key]?.color || '#782F40',
-      }));
-
-    // Block type data
-    const typeColors = { activity:'#782F40', debrief:'#2563eb', break:'#d97706', transition:'#78716C', custom:'#7c3aed' };
-    const typeData = Object.entries(byType)
-      .sort((a, b) => b[1] - a[1])
-      .map(([key, value]) => ({ label: key, value, color: typeColors[key] || '#78716C' }));
-
-    return { byStatus, topActivities, goalData, typeData, totalMin, completedSessions };
+    return {
+      totalGames: games.length,
+      totalSessions: sessions.length,
+      mostUsed,
+      activeStaff: new Set(sessions.map(s => s.owner_id)).size
+    };
   }, [sessions, blocks, games]);
 
-  if (loading) return <div className="p-6 text-fsu-muted">Loading analytics…</div>;
-
-  const completionRate = sessions.length > 0
-    ? Math.round((stats.completedSessions / sessions.length) * 100) : 0;
+  if (loading) return <div className="p-8 text-slate-400">Loading analytics...</div>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="font-syne font-bold text-2xl text-fsu-text mb-1">Analytics</h1>
-      <p className="text-fsu-muted text-sm mb-6">
-        {isAdmin ? 'Platform-wide statistics' : 'Your session statistics'}
-      </p>
-
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Sessions" value={sessions.length} />
-        <StatCard label="Completed" value={stats.completedSessions} sub={`${completionRate}% completion rate`} />
-        <StatCard label="Total Blocks" value={blocks.length} />
-        <StatCard label="Total Facilitated" value={`${Math.round(stats.totalMin / 60)}h`} sub={`${stats.totalMin} min`} />
+    <div className="flex-1 overflow-y-auto p-8 bg-background-light dark:bg-background-dark font-display">
+      <div className="mb-8">
+        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Analytics Overview</h2>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Tracking performance across the FSU Challenge Course program.</p>
       </div>
 
-      {/* Session status */}
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-        {[
-          { key: 'draft',     label: 'Draft',     bg: '#fef3c7', color: '#d97706' },
-          { key: 'ready',     label: 'Ready',     bg: '#dcfce7', color: '#16a34a' },
-          { key: 'completed', label: 'Completed', bg: '#dbeafe', color: '#2563eb' },
-        ].map(({ key, label, bg, color }) => (
-          <div key={key} className="rounded-xl p-4 border"
-            style={{ background: bg, borderColor: color + '40' }}>
-            <p className="text-xs font-semibold mb-1" style={{ color }}>{label}</p>
-            <p className="font-syne font-bold text-2xl" style={{ color }}>
-              {stats.byStatus[key] || 0}
-            </p>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard icon="sports_kabaddi" label="Total Games" value={stats.totalGames} trend="+4%" />
+        <StatCard icon="event_available" label="Total Sessions" value={stats.totalSessions} trend="+12%" />
+        <StatCard icon="stars" label="Most Used Game" value={stats.mostUsed} highlight="Popular" />
+        <StatCard icon="person_check" label="Active Facilitators" value={stats.activeStaff} trend="+2" />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Goal coverage */}
-        {stats.goalData.length > 0 && (
-          <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
-            <h2 className="font-syne font-semibold text-fsu-text mb-4">Goal Coverage</h2>
-            <BarChart data={stats.goalData} />
-          </div>
-        )}
-
-        {/* Block types */}
-        {stats.typeData.length > 0 && (
-          <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
-            <h2 className="font-syne font-semibold text-fsu-text mb-4">Block Types</h2>
-            <BarChart data={stats.typeData} />
-          </div>
-        )}
-
-        {/* Top activities */}
-        {stats.topActivities.length > 0 && (
-          <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5 md:col-span-2">
-            <h2 className="font-syne font-semibold text-fsu-text mb-4">Most-Used Activities</h2>
-            <BarChart data={stats.topActivities} />
-          </div>
-        )}
-
-        {sessions.length === 0 && (
-          <div className="md:col-span-2 bg-fsu-soft border border-fsu-border rounded-xl p-10 text-center">
-            <p className="text-fsu-muted text-sm">No session data yet. Create a session to see analytics.</p>
-          </div>
-        )}
+      <div className="bg-white dark:bg-slate-900/40 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h3 className="font-bold text-lg">Recent Sessions</h3>
+          <button className="text-sm text-primary font-bold hover:underline">View All</button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Group / Name</th>
+                <th className="px-6 py-4 font-semibold">Facilitator</th>
+                <th className="px-6 py-4 font-semibold">Date</th>
+                <th className="px-6 py-4 font-semibold">Status</th>
+                <th className="px-6 py-4 font-semibold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {sessions.map(s => (
+                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-slate-900 dark:text-slate-100">{s.name}</div>
+                    <div className="text-xs text-slate-500">{s.notes?.substring(0, 30)}...</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                     {s.profiles?.name || s.profiles?.email || 'Unknown'}
+                  </td>
+                  <td className="px-6 py-4 text-sm">{new Date(s.updated_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                      s.status === 'completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      s.status === 'ready' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                      'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                    }`}>
+                      {s.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="text-slate-400 hover:text-primary"><span className="material-symbols-outlined">more_vert</span></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, trend, highlight }) {
+  return (
+    <div className="bg-white dark:bg-slate-900/40 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between mb-4">
+        <span className="p-2 bg-primary/10 rounded-lg text-primary">
+          <span className="material-symbols-outlined">{icon}</span>
+        </span>
+        {trend && <span className="text-xs font-bold text-emerald-500">{trend}</span>}
+        {highlight && <span className="text-xs font-medium text-slate-400">{highlight}</span>}
+      </div>
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-white truncate">{value}</p>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 export const GOAL_META = {
-  'community-building': { color: '#16a34a', bg: '#dcfce7', label: 'Community'       },
-  'communication':      { color: '#2563eb', bg: '#dbeafe', label: 'Communication'   },
-  'energizer':          { color: '#d97706', bg: '#fef3c7', label: 'Energizer'       },
-  'leadership':         { color: '#7c3aed', bg: '#ede9fe', label: 'Leadership'      },
-  'problem-solving':    { color: '#db2777', bg: '#fce7f3', label: 'Problem-Solving' },
-  'trust':              { color: '#0891b2', bg: '#cffafe', label: 'Trust'           },
+  'community-building': { color: '#34d399', bg: 'rgba(16, 185, 129, 0.1)', label: 'Community', emoji: '🤝' },
+  'communication':      { color: '#38bdf8', bg: 'rgba(14, 165, 233, 0.1)', label: 'Communication', emoji: '💬' },
+  'energizer':          { color: '#fb923c', bg: 'rgba(249, 115, 22, 0.1)', label: 'Energizer', emoji: '⚡' },
+  'leadership':         { color: '#a78bfa', bg: 'rgba(139, 92, 246, 0.1)', label: 'Leadership', emoji: '👑' },
+  'problem-solving':    { color: '#c084fc', bg: 'rgba(168, 85, 247, 0.1)', label: 'Problem Solving', emoji: '🧩' },
+  'trust':              { color: '#792f40', bg: 'rgba(121, 47, 64, 0.1)', label: 'Trust', emoji: '🎯' },
 };
 
 export const GOAL_KEYS = Object.keys(GOAL_META);

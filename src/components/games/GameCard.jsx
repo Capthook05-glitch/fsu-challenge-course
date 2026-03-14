@@ -1,127 +1,143 @@
-import { useState } from 'react';
 import { GoalTag } from '../ui/GoalTag';
 
-export function GameCard({ game, onViewDetail, onAdd, isInSession = false }) {
-  const [expanded, setExpanded] = useState(false);
+export function GameCard({ game, onViewDetail, onAdd, isInSession = false, isExpanded = false }) {
+  if (isExpanded) {
+    return (
+      <div className="md:col-span-2 xl:col-span-3 bg-slate-900 border-2 border-primary/40 rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 transition-all">
+        <div className="flex flex-col lg:flex-row">
+          <div className="lg:w-1/3 h-64 lg:h-auto relative bg-slate-800">
+             {game.image_url ? (
+                <img className="w-full h-full object-cover opacity-60" alt={game.name} src={game.image_url} />
+             ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-700">
+                   <span className="material-symbols-outlined text-6xl">image</span>
+                </div>
+             )}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-transparent to-transparent lg:hidden"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent lg:hidden"></div>
+          </div>
+          <div className="flex-1 p-8 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {game.goals?.map(g => <GoalTag key={g} goal={g} />)}
+                </div>
+                <h3 className="text-3xl font-extrabold text-slate-100">{game.name}</h3>
+              </div>
+              <button
+                onClick={() => onAdd && onAdd(game)}
+                disabled={isInSession}
+                className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-transform active:scale-95 ${
+                  isInSession
+                    ? 'bg-primary text-white'
+                    : 'bg-primary hover:scale-105 text-white'
+                }`}
+              >
+                {isInSession ? (
+                  <>
+                    <span className="material-symbols-outlined filled-icon">check_circle</span>
+                    In Plan
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined">add_circle</span>
+                    Add to Plan
+                  </>
+                )}
+              </button>
+            </div>
 
-  const activityColors = { low: '#16a34a', medium: '#d97706', high: '#dc2626' };
-  const activityColor = activityColors[game.activity_level] || '#78716C';
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-4 border-y border-slate-800">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">groups</span>
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Group Size</p>
+                  <p className="text-sm font-bold">{game.min_group} - {game.max_group} players</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">schedule</span>
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Time</p>
+                  <p className="text-sm font-bold">{game.time_min} - {game.time_max} mins</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">fitness_center</span>
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Intensity</p>
+                  <p className="text-sm font-bold text-accent-gold capitalize">{game.activity_level}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">layers</span>
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Materials</p>
+                  <p className="text-sm font-bold">{game.materials || 'None'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-bold text-accent-gold flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">sticky_note_2</span>
+                Facilitation Notes
+              </h4>
+              <div className="grid md:grid-cols-2 gap-8 text-sm leading-relaxed text-slate-400">
+                <div className="space-y-3">
+                  <p>{game.description}</p>
+                </div>
+                <div className="space-y-3">
+                   {game.facilitation && <p>{game.facilitation}</p>}
+                   {game.safety_notes && <p><strong className="text-slate-200">Safety:</strong> {game.safety_notes}</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const intensityColors = {
+    low: 'text-emerald-500',
+    medium: 'text-accent-gold',
+    high: 'text-orange-500'
+  };
 
   return (
-    <div className="bg-fsu-surface border border-fsu-border rounded-xl overflow-hidden hover:border-fsu-border2 hover:shadow-md transition-all">
-      {/* Card header */}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-syne font-bold text-fsu-text text-base leading-snug">{game.name}</h3>
-          <span style={{ background: activityColor + '18', color: activityColor, border: `1px solid ${activityColor}33` }}
-            className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 capitalize">
-            {game.activity_level}
-          </span>
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col hover:border-primary/50 transition-all group">
+      <div className="flex flex-wrap gap-2 mb-4">
+        {game.goals?.map(g => <GoalTag key={g} goal={g} size="sm" />)}
+      </div>
+      <h3 className="text-xl font-bold group-hover:text-primary transition-colors text-slate-100">{game.name}</h3>
+      <p className="text-slate-400 text-sm mt-2 line-clamp-2">{game.description}</p>
+
+      <div className="mt-6 flex items-center justify-between text-slate-400 text-xs py-3 border-t border-slate-800/50">
+        <div className="flex items-center gap-1">
+          <span className="material-symbols-outlined text-[16px]">groups</span>
+          <span>{game.min_group} - {game.max_group}</span>
         </div>
-
-        {/* Meta row */}
-        <div className="flex flex-wrap gap-3 text-xs text-fsu-muted mb-3">
-          <span>{game.min_group}–{game.max_group} people</span>
-          <span>{game.time_min}–{game.time_max} min</span>
-          {game.setting?.map(s => (
-            <span key={s} className="capitalize bg-fsu-soft border border-fsu-border px-2 py-0.5 rounded-full text-fsu-muted">
-              {s}
-            </span>
-          ))}
-          {(game.physical_intensity || game.psychological_intensity) && (
-            <>
-              {game.physical_intensity && (
-                <span className="bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full">
-                  Phys {game.physical_intensity}/5
-                </span>
-              )}
-              {game.psychological_intensity && (
-                <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
-                  Psych {game.psychological_intensity}/5
-                </span>
-              )}
-            </>
-          )}
+        <div className="flex items-center gap-1">
+          <span className="material-symbols-outlined text-[16px]">schedule</span>
+          <span>{game.time_min}m</span>
         </div>
-
-        {/* Description */}
-        {game.description && (
-          <p className="text-sm text-fsu-muted leading-relaxed mb-3 line-clamp-2">{game.description}</p>
-        )}
-
-        {/* Goal tags */}
-        {game.goals?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {game.goals.map(g => <GoalTag key={g} goal={g} />)}
-          </div>
-        )}
-
-        {/* Expand toggle */}
-        {(game.facilitation || game.materials) && (
-          <button
-            onClick={() => setExpanded(v => !v)}
-            className="text-xs text-fsu-garnet hover:text-fsu-garnet2 font-medium transition-colors"
-          >
-            {expanded ? '▲ Hide tips' : '▼ Facilitation tips & materials'}
-          </button>
-        )}
+        <span className={`font-bold uppercase tracking-widest text-[10px] ${intensityColors[game.activity_level] || 'text-slate-500'}`}>
+          {game.activity_level} Intensity
+        </span>
       </div>
 
-      {/* Expanded section */}
-      {expanded && (game.facilitation || game.materials) && (
-        <div className="border-t border-fsu-border bg-fsu-soft px-4 py-3 space-y-2">
-          {game.facilitation && (
-            <div>
-              <p className="text-xs font-semibold text-fsu-text mb-1">Facilitation Notes</p>
-              <p className="text-xs text-fsu-muted leading-relaxed">{game.facilitation}</p>
-            </div>
-          )}
-          {game.materials && (
-            <div>
-              <p className="text-xs font-semibold text-fsu-text mb-1">Materials</p>
-              <p className="text-xs text-fsu-muted">{game.materials}</p>
-            </div>
-          )}
-          {game.safety_notes && (
-            <div>
-              <p className="text-xs font-semibold text-red-700 mb-1">Safety Notes</p>
-              <p className="text-xs text-red-600 leading-relaxed">{game.safety_notes}</p>
-            </div>
-          )}
-          {game.learning_objectives?.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-fsu-text mb-1">Learning Objectives</p>
-              <ul className="text-xs text-fsu-muted list-disc list-inside space-y-0.5">
-                {game.learning_objectives.map((obj, i) => <li key={i}>{obj}</li>)}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Action footer */}
-      <div className="px-4 py-3 border-t border-fsu-border flex gap-2">
-        {onViewDetail && (
-          <button
-            onClick={() => onViewDetail(game)}
-            className="flex-1 text-sm border border-fsu-border2 text-fsu-muted hover:text-fsu-text hover:border-fsu-garnet rounded-lg py-1.5 transition-colors"
-          >
-            Details
-          </button>
-        )}
-        {onAdd && (
-          <button
-            onClick={() => !isInSession && onAdd(game)}
-            className={`flex-1 text-sm rounded-lg py-1.5 font-medium transition-colors ${
-              isInSession
-                ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
-                : 'bg-fsu-garnet hover:bg-fsu-garnet2 text-white'
-            }`}
-          >
-            {isInSession ? '✓ In Session' : '+ Add'}
-          </button>
-        )}
-      </div>
+      <button
+        onClick={() => onAdd && onAdd(game)}
+        disabled={isInSession}
+        className={`mt-4 w-full py-2.5 rounded-lg border font-bold text-sm transition-all ${
+          isInSession
+            ? 'border-primary bg-primary text-white cursor-default'
+            : 'border-primary text-primary hover:bg-primary hover:text-white'
+        }`}
+      >
+        {isInSession ? '✓ In Plan' : 'Add to Plan'}
+      </button>
     </div>
   );
 }

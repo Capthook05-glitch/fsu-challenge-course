@@ -6,12 +6,6 @@ import { useProfile } from '../context/ProfileContext';
 
 const supabase = getSupabaseClient();
 
-function fmt(s) {
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-}
-
 export default function FacilitationMode() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,9 +17,6 @@ export default function FacilitationMode() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef(null);
-  const [showLog, setShowLog] = useState(false);
-  const [logForm, setLogForm] = useState({ what_happened: '', group_reaction: '', change_next_time: '' });
-  const [savingLog, setSavingLog] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -36,7 +27,6 @@ export default function FacilitationMode() {
       setSession(sess);
       const bs = blks || [];
       setBlocks(bs);
-      // Load game details
       const gids = [...new Set(bs.filter(b => b.game_id).map(b => b.game_id))];
       if (gids.length) {
         const { data: gs } = await supabase.from('games').select('*').in('id', gids);
@@ -61,182 +51,166 @@ export default function FacilitationMode() {
   function nextBlock() { if (idx < blocks.length - 1) { setIdx(i => i+1); resetTimer(); } }
   function prevBlock() { if (idx > 0) { setIdx(i => i-1); resetTimer(); } }
 
-  async function submitLog() {
-    if (!logForm.what_happened.trim()) return;
-    setSavingLog(true);
-    const block = blocks[idx];
-    await supabase.from('block_logs').insert({
-      block_id: block?.id,
-      session_id: id,
-      ...logForm,
-      submitted_by: profile?.id,
-    });
-    setSavingLog(false);
-    setLogForm({ what_happened: '', group_reaction: '', change_next_time: '' });
-    setShowLog(false);
-  }
-
   const block = blocks[idx];
   const game  = block?.game_id ? games[block.game_id] : null;
   const title = game?.name || block?.title || 'Break';
-  const minSec = (game?.time_min || block?.duration_min || 10) * 60;
-  const maxSec = (game?.time_max || block?.duration_min || 30) * 60;
 
-  function timerStyle() {
-    if (elapsed >= maxSec) return { color: '#dc2626' };
-    if (elapsed >= minSec) return { color: '#d97706' };
-    return { color: '#782F40' };
-  }
-
-  function timerStatus() {
-    if (elapsed >= maxSec) return { label: 'Over time', bg: '#fee2e2', color: '#dc2626' };
-    if (elapsed >= minSec) return { label: 'In the zone', bg: '#fef3c7', color: '#d97706' };
-    return { label: running ? 'Running' : 'Ready', bg: '#F5F2EE', color: '#78716C' };
-  }
-
-  const status = timerStatus();
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
 
   return (
-    <div className="min-h-screen bg-fsu-white flex flex-col">
-      {/* Top bar */}
-      <div className="bg-fsu-garnet text-white px-4 py-3 flex items-center justify-between no-print">
-        <Link to={`/sessions/${id}`} className="text-white/70 hover:text-white text-sm">&larr; Back</Link>
-        <span className="font-syne font-bold text-sm truncate max-w-xs">{session?.name}</span>
-        <span className="text-white/50 text-sm">{idx+1}/{blocks.length}</span>
-      </div>
-
-      {/* Progress dots */}
-      <div className="flex gap-1.5 justify-center px-4 py-3 no-print">
-        {blocks.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => { setIdx(i); resetTimer(); }}
-            className="h-2 rounded-full transition-all"
-            style={{ width: i === idx ? 24 : 8, background: i === idx ? '#782F40' : '#E8E2D9' }}
-          />
-        ))}
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-2xl mx-auto w-full">
-        {block ? (
-          <>
-            {/* Activity title */}
-            <h1 className="font-syne font-bold text-3xl md:text-4xl text-fsu-text text-center mb-2">{title}</h1>
-
-            {/* Goals */}
-            {game?.goals?.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-center mb-4">
-                {game.goals.map(g => <GoalTag key={g} goal={g} size="lg" />)}
-              </div>
-            )}
-
-            {/* Meta */}
-            <div className="flex gap-4 text-sm text-fsu-muted mb-8">
-              {game && <span>{game.min_group}–{game.max_group} people</span>}
-              {(game || block) && <span>{(game?.time_min || block?.duration_min)}–{(game?.time_max || block?.duration_min)} min</span>}
-              {block?.location && <span>{block.location}</span>}
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-background-dark text-slate-100 font-display">
+      {/* Header */}
+      <header className="flex items-center justify-between border-b border-white/10 px-6 py-4 lg:px-20 bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+          <div className="text-primary">
+            <span className="material-symbols-outlined text-3xl">school</span>
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-lg font-bold leading-tight tracking-tight text-slate-100">FSU Facilitator Toolkit</h2>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">Facilitation Mode</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-2">
+            <div className="flex gap-1.5">
+               {blocks.map((_, i) => (
+                  <div key={i} className={`h-2 rounded-full transition-all ${i < idx ? 'bg-primary w-2' : i === idx ? 'bg-accent-gold w-8' : 'bg-white/20 w-2'}`}></div>
+               ))}
             </div>
-
-            {/* Timer */}
-            <div className="text-center mb-6">
-              <div className="font-syne font-bold text-7xl mb-2 tabular-nums" style={timerStyle()}>
-                {fmt(elapsed)}
-              </div>
-              <span className="text-sm font-semibold px-3 py-1 rounded-full" style={{ background: status.bg, color: status.color }}>
-                {status.label}
-              </span>
-            </div>
-
-            {/* Timer controls */}
-            <div className="flex gap-3 mb-8 no-print">
-              <button onClick={() => setRunning(r => !r)}
-                className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
-                {running ? 'Pause' : 'Start'}
-              </button>
-              <button onClick={resetTimer}
-                className="border border-fsu-border2 text-fsu-muted hover:text-fsu-text px-4 py-2.5 rounded-xl transition-colors">
-                Reset
-              </button>
-            </div>
-
-            {/* Safety notes if any */}
-            {game?.safety_notes && (
-              <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-sm text-amber-800">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-1">Safety Note</p>
-                {game.safety_notes}
-              </div>
-            )}
-
-            {/* Facilitator notes */}
-            {(block?.notes || game?.facilitation) && (
-              <div className="w-full bg-fsu-soft border border-fsu-border rounded-xl p-4 mb-4 text-sm text-fsu-muted leading-relaxed">
-                {block?.notes || game?.facilitation}
-              </div>
-            )}
-
-            {/* After-action log button */}
-            <button onClick={() => setShowLog(true)}
-              className="text-xs border border-fsu-border2 text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-4 py-2 rounded-xl transition-colors">
-              Log After-Action Notes
+            <span className="ml-2 text-sm font-bold text-accent-gold uppercase tracking-tighter">Block {idx + 1} of {blocks.length}</span>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={prevBlock} disabled={idx === 0} className="flex items-center justify-center rounded-lg h-10 px-4 bg-white/5 hover:bg-white/10 text-white text-sm font-bold transition-colors disabled:opacity-30">
+              <span className="material-symbols-outlined mr-2 text-lg">chevron_left</span>Prev
             </button>
-          </>
-        ) : (
-          <p className="text-fsu-muted">No blocks in this session.</p>
-        )}
-      </div>
+            <button onClick={nextBlock} disabled={idx === blocks.length - 1} className="flex items-center justify-center rounded-lg h-10 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-bold transition-colors disabled:opacity-30">
+              Next<span className="material-symbols-outlined ml-2 text-lg">chevron_right</span>
+            </button>
+            <div className="w-px h-8 bg-white/10 mx-1"></div>
+            <button onClick={() => navigate(`/sessions/${id}`)} className="flex items-center justify-center rounded-lg h-10 px-4 border border-white/20 hover:bg-white/5 text-slate-300 text-sm font-bold transition-colors">
+              Exit
+            </button>
+          </div>
+        </div>
+      </header>
 
-      {/* After-Action Log Modal */}
-      {showLog && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center p-4">
-          <div className="bg-fsu-surface rounded-2xl shadow-xl w-full max-w-md">
-            <div className="px-5 py-4 border-b border-fsu-border flex items-center justify-between">
-              <h2 className="font-syne font-bold text-fsu-text text-sm">After-Action Log — {blocks[idx]?.title || 'Block'}</h2>
-              <button onClick={() => setShowLog(false)} className="text-fsu-muted hover:text-fsu-text text-xl">×</button>
-            </div>
-            <div className="px-5 py-4 space-y-3">
-              {['what_happened','group_reaction','change_next_time'].map((field, i) => (
-                <div key={field}>
-                  <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">
-                    {['What happened?','Group reaction?','Change next time?'][i]}
-                  </label>
-                  <textarea value={logForm[field]} onChange={e => setLogForm(f => ({ ...f, [field]: e.target.value }))}
-                    rows={2} className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
+      <main className="flex-1 flex flex-col items-center px-6 lg:px-20 py-10 max-w-[1400px] mx-auto w-full">
+        {/* Title Section */}
+        <div className="text-center mb-8">
+          <p className="text-accent-gold font-bold uppercase tracking-[0.2em] text-xs mb-2">Current Activity</p>
+          <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-6">{title}</h1>
+          <div className="flex flex-wrap justify-center gap-4">
+            {game && (
+              <>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+                  <span className="material-symbols-outlined text-accent-gold text-lg">groups</span>
+                  <span className="text-sm font-semibold text-slate-200">{game.min_group}-{game.max_group} People</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+                  <span className="material-symbols-outlined text-accent-gold text-lg">schedule</span>
+                  <span className="text-sm font-semibold text-slate-200">{game.time_min}-{game.time_max} mins</span>
+                </div>
+              </>
+            )}
+             <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+                <span className="material-symbols-outlined text-accent-gold text-lg">bolt</span>
+                <span className="text-sm font-semibold text-slate-200 capitalize">{block?.block_type}</span>
+             </div>
+             {block?.location && (
+               <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+                 <span className="material-symbols-outlined text-accent-gold text-lg">forest</span>
+                 <span className="text-sm font-semibold text-slate-200">{block.location}</span>
+               </div>
+             )}
+          </div>
+        </div>
+
+        {/* Timer Section */}
+        <div className="w-full max-w-2xl bg-white/5 rounded-2xl p-8 border border-white/10 flex flex-col items-center mb-12">
+          <div className="flex gap-4 mb-2">
+            <div className="flex flex-col items-center">
+              <span className="text-7xl md:text-9xl font-black text-accent-gold tabular-nums leading-none">{String(mins).padStart(2,'0')}</span>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-2">Minutes</span>
             </div>
-            <div className="px-5 py-4 border-t border-fsu-border flex gap-3">
-              <button onClick={submitLog} disabled={savingLog || !logForm.what_happened.trim()}
-                className="flex-1 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
-                {savingLog ? 'Saving…' : 'Save Log'}
-              </button>
-              <button onClick={() => setShowLog(false)}
-                className="border border-fsu-border text-fsu-muted px-4 py-2.5 rounded-xl text-sm">
-                Skip
-              </button>
+            <span className="text-7xl md:text-9xl font-black text-accent-gold/40 leading-none">:</span>
+            <div className="flex flex-col items-center">
+              <span className="text-7xl md:text-9xl font-black text-accent-gold tabular-nums leading-none">{String(secs).padStart(2,'0')}</span>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-2">Seconds</span>
+            </div>
+          </div>
+          <div className="flex gap-4 mt-6">
+            <button onClick={resetTimer} className="flex items-center justify-center rounded-full h-12 w-12 bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <span className="material-symbols-outlined">restart_alt</span>
+            </button>
+            <button onClick={() => setRunning(!running)} className="flex items-center justify-center rounded-full h-14 px-8 bg-accent-gold hover:bg-accent-gold/90 text-background-dark font-black uppercase tracking-widest transition-transform active:scale-95">
+              <span className="material-symbols-outlined mr-2">{running ? 'pause' : 'play_arrow'}</span> {running ? 'Pause' : 'Start'}
+            </button>
+          </div>
+        </div>
+
+        {/* Content Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="material-symbols-outlined text-primary">description</span>
+              <h3 className="text-xl font-bold text-white">Activity Description</h3>
+            </div>
+            <div className="space-y-4 text-slate-300 leading-relaxed">
+               <p>{game?.description || 'No description available.'}</p>
+               {game?.learning_objectives?.length > 0 && (
+                 <ul className="list-disc pl-5 space-y-2 text-slate-400">
+                    {game.learning_objectives.map((o, i) => <li key={i}>{o}</li>)}
+                 </ul>
+               )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div className="bg-white/5 rounded-xl border border-white/10 p-8 flex-1">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="material-symbols-outlined text-primary">campaign</span>
+                <h3 className="text-xl font-bold text-white">Facilitation Notes</h3>
+              </div>
+              <div className="space-y-4 text-slate-300 leading-relaxed">
+                 <p>{block?.notes || game?.facilitation || 'No specific notes for this block.'}</p>
+                 {game?.safety_notes && (
+                    <div className="pt-4 border-t border-white/10">
+                       <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Safety Considerations</h4>
+                       <p className="text-sm text-slate-400">{game.safety_notes}</p>
+                    </div>
+                 )}
+              </div>
+            </div>
+
+            <div className="bg-primary/10 rounded-lg p-6 border-l-4 border-accent-gold shadow-xl">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-accent-gold text-sm">edit_note</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-accent-gold">Facilitator Reminder</span>
+              </div>
+              <p className="text-slate-100 font-medium">Keep an eye on group energy levels and adjust the pace if needed.</p>
             </div>
           </div>
         </div>
-      )}
+      </main>
 
-      {/* Bottom nav */}
-      <div className="px-6 py-4 flex gap-3 justify-center no-print">
-        <button onClick={prevBlock} disabled={idx === 0}
-          className="border border-fsu-border2 text-fsu-text px-6 py-2.5 rounded-xl font-medium disabled:opacity-30 hover:border-fsu-garnet transition-colors">
-          &larr; Previous
-        </button>
-        {idx < blocks.length - 1 ? (
-          <button onClick={nextBlock}
-            className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
-            Next &rarr;
+      {/* Footer */}
+      <footer className="mt-auto px-6 py-4 bg-background-dark/80 backdrop-blur-md border-t border-white/5 flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/20 rounded text-green-400 text-[10px] font-bold uppercase">
+            <span className={`h-1.5 w-1.5 rounded-full bg-green-500 ${running ? 'animate-pulse' : ''}`}></span> Live Session
+          </div>
+          <span className="text-slate-500 text-xs font-medium italic">Assigned to: {profile?.name || profile?.email}</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <button className="text-slate-400 hover:text-white transition-colors">
+            <span className="material-symbols-outlined">settings</span>
           </button>
-        ) : (
-          <Link to={`/sessions/${id}`}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
-            Finish Session
-          </Link>
-        )}
-      </div>
+          <div className="h-8 w-8 rounded-full bg-primary/40 border border-primary/60 flex items-center justify-center text-[10px] font-bold text-white">
+            {profile?.name?.[0] || 'U'}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

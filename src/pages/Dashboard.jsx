@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
-import { STATUS_STYLE } from '../lib/statusStyles';
+import { Badge } from '../components/ui/Badge';
 
 const supabase = getSupabaseClient();
 
-// ─── Admin / Lead Facilitator view ───────────────────────────
-function PlannerDashboard({ profile, isAdmin }) {
+export default function Dashboard() {
+  const { profile, isAdmin } = useProfile();
   const [stats, setStats] = useState({ sessions: 0, games: 0, users: 0 });
   const [recent, setRecent] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -19,190 +20,90 @@ function PlannerDashboard({ profile, isAdmin }) {
         supabase.from('sessions').select('id,name,status,updated_at')
           .eq('is_archived', false)
           .order('updated_at', { ascending: false })
-          .limit(4),
+          .limit(5),
       ];
-      if (isAdmin) {
-        queries.push(supabase.from('profiles').select('*', { count: 'exact', head: true }));
-      }
       const results = await Promise.all(queries);
       setStats({
         sessions: results[0].count || 0,
         games:    results[1].count || 0,
-        users:    isAdmin ? (results[3]?.count || 0) : null,
       });
       setRecent(results[2].data || []);
-    }
-    load();
-  }, [isAdmin]);
-
-  return (
-    <div className="p-6 max-w-4xl">
-      <div className="mb-7">
-        <h1 className="font-syne font-bold text-3xl text-fsu-text mb-1">
-          Welcome back{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
-        </h1>
-        <p className="text-fsu-muted">FSU Challenge Course Facilitator Toolkit</p>
-      </div>
-
-      {/* Stats */}
-      <div className={`grid gap-4 mb-7 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
-          <p className="text-xs text-fsu-muted font-medium uppercase tracking-wide mb-1">Active Sessions</p>
-          <p className="font-syne font-bold text-4xl text-fsu-garnet">{stats.sessions}</p>
-        </div>
-        <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
-          <p className="text-xs text-fsu-muted font-medium uppercase tracking-wide mb-1">Activities</p>
-          <p className="font-syne font-bold text-4xl text-fsu-garnet">{stats.games}</p>
-        </div>
-        {isAdmin && (
-          <div className="bg-fsu-surface border border-fsu-border rounded-xl p-5">
-            <p className="text-xs text-fsu-muted font-medium uppercase tracking-wide mb-1">Users</p>
-            <p className="font-syne font-bold text-4xl text-fsu-garnet">{stats.users}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Quick actions */}
-      <div className="flex flex-wrap gap-3 mb-8">
-        <Link to="/sessions"
-          className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
-          + New Session
-        </Link>
-        <Link to="/games"
-          className="bg-fsu-surface border border-fsu-border2 hover:border-fsu-garnet text-fsu-text px-5 py-2.5 rounded-xl text-sm font-medium transition-colors">
-          Browse Activities
-        </Link>
-        {isAdmin && (
-          <Link to="/admin"
-            className="bg-fsu-surface border border-fsu-border2 hover:border-fsu-garnet text-fsu-text px-5 py-2.5 rounded-xl text-sm font-medium transition-colors">
-            Manage Users
-          </Link>
-        )}
-      </div>
-
-      {/* Recent sessions */}
-      {recent.length > 0 && (
-        <div>
-          <h2 className="font-syne font-semibold text-fsu-text text-base mb-3">Recent Sessions</h2>
-          <div className="space-y-2">
-            {recent.map(s => {
-              const st = STATUS_STYLE[s.status] || STATUS_STYLE.draft;
-              return (
-                <Link key={s.id} to={`/sessions/${s.id}`}
-                  className="flex items-center justify-between p-4 bg-fsu-surface border border-fsu-border rounded-xl hover:border-fsu-garnet hover:shadow-sm transition-all">
-                  <span className="font-medium text-sm text-fsu-text">{s.name}</span>
-                  <span className="text-xs font-semibold capitalize px-2.5 py-1 rounded-full"
-                    style={{ background: st.bg, color: st.color }}>
-                    {s.status}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Assistant Facilitator view ───────────────────────────────
-function AssistantDashboard({ profile }) {
-  const [assigned, setAssigned] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      // Get session IDs assigned to this user
-      const { data: memberships } = await supabase
-        .from('session_members')
-        .select('session_id, role')
-        .eq('profile_id', profile.id);
-
-      if (!memberships?.length) { setLoading(false); return; }
-
-      const sessionIds = memberships.map(m => m.session_id);
-      const { data: sessions } = await supabase
-        .from('sessions')
-        .select('id, name, status, updated_at')
-        .in('id', sessionIds)
-        .eq('is_archived', false)
-        .order('updated_at', { ascending: false });
-
-      setAssigned(sessions || []);
       setLoading(false);
     }
     load();
-  }, [profile.id]);
+  }, []);
+
+  if (!profile || loading) return <div className="p-8 text-slate-400">Loading dashboard...</div>;
 
   return (
-    <div className="p-6 max-w-3xl">
-      <div className="mb-7">
-        <h1 className="font-syne font-bold text-3xl text-fsu-text mb-1">
-          Hello{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
-        </h1>
-        <p className="text-fsu-muted">Your assigned sessions are listed below.</p>
+    <div className="flex-1 overflow-y-auto p-8 bg-background-light dark:bg-background-dark font-display">
+      <div className="mb-8">
+        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Welcome back, {profile.name || profile.email}</h2>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Here is an overview of the FSU Challenge Course program.</p>
       </div>
 
-      {/* Role notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
-        <span className="text-blue-500 text-lg mt-0.5">i</span>
-        <div>
-          <p className="text-sm font-semibold text-blue-800">Assistant Facilitator</p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            You can view session timelines and run facilitation mode. Contact your lead facilitator to be added to sessions.
-          </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard icon="sports_kabaddi" label="Total Games" value={stats.games} />
+        <StatCard icon="event_available" label="Active Sessions" value={stats.sessions} />
+      </div>
+
+      <div className="flex flex-wrap gap-4 mb-12">
+         <Link to="/games" className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-lg shadow-primary/20">
+            Browse Catalog
+         </Link>
+         <Link to="/sessions" className="bg-white dark:bg-slate-900/40 text-primary border border-primary/20 px-6 py-3 rounded-xl font-bold hover:bg-primary/5 transition-colors">
+            Manage Sessions
+         </Link>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900/40 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h3 className="font-bold text-lg">Recent Sessions</h3>
+          <Link to="/sessions" className="text-sm text-primary font-bold hover:underline">View All</Link>
         </div>
-      </div>
-
-      <h2 className="font-syne font-semibold text-fsu-text text-base mb-3">Assigned Sessions</h2>
-
-      {loading && <p className="text-fsu-muted text-sm">Loading...</p>}
-
-      {!loading && assigned.length === 0 && (
-        <div className="text-center py-16 text-fsu-muted border-2 border-dashed border-fsu-border rounded-2xl">
-          <p className="text-lg font-medium mb-2">No sessions assigned yet</p>
-          <p className="text-sm">Your lead facilitator will add you to sessions once they're planned.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Session Name</th>
+                <th className="px-6 py-4 font-semibold">Last Updated</th>
+                <th className="px-6 py-4 font-semibold text-center">Status</th>
+                <th className="px-6 py-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {recent.map(s => (
+                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <Link to={`/sessions/${s.id}`} className="font-bold text-slate-900 dark:text-slate-100 hover:text-primary transition-colors">{s.name}</Link>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-500">{new Date(s.updated_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-center">
+                    <Badge variant={s.status} />
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <Link to={`/sessions/${s.id}`} className="text-slate-400 hover:text-primary"><span className="material-symbols-outlined">arrow_forward</span></Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      <div className="space-y-2">
-        {assigned.map(s => {
-          const st = STATUS_STYLE[s.status] || STATUS_STYLE.draft;
-          return (
-            <Link key={s.id} to={`/sessions/${s.id}`}
-              className="flex items-center justify-between p-4 bg-fsu-surface border border-fsu-border rounded-xl hover:border-fsu-garnet hover:shadow-sm transition-all">
-              <span className="font-medium text-sm text-fsu-text">{s.name}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-fsu-muted">View only</span>
-                <span className="text-xs font-semibold capitalize px-2.5 py-1 rounded-full"
-                  style={{ background: st.bg, color: st.color }}>
-                  {s.status}
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="mt-6">
-        <Link to="/games"
-          className="bg-fsu-surface border border-fsu-border2 hover:border-fsu-garnet text-fsu-text px-5 py-2.5 rounded-xl text-sm font-medium transition-colors inline-block">
-          Browse Activity Library
-        </Link>
       </div>
     </div>
   );
 }
 
-// ─── Root component ───────────────────────────────────────────
-export default function Dashboard() {
-  const { profile, isAdmin, isAssistantFacilitator } = useProfile();
-
-  if (!profile) return null;
-
-  if (isAssistantFacilitator) {
-    return <AssistantDashboard profile={profile} />;
-  }
-
-  return <PlannerDashboard profile={profile} isAdmin={isAdmin} />;
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="bg-white dark:bg-slate-900/40 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between mb-4">
+        <span className="p-2 bg-primary/10 rounded-lg text-primary">
+          <span className="material-symbols-outlined">{icon}</span>
+        </span>
+      </div>
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-white truncate">{value}</p>
+    </div>
+  );
 }
