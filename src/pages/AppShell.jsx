@@ -12,17 +12,15 @@ const ROLE_LABEL = {
 };
 
 const NAV_ITEMS = [
-  { to: '/games',     label: 'Catalog',          roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/sessions',  label: 'Planner',          roles: ['admin','lead_facilitator'] },
-  { to: '/templates', label: 'Blueprints',       roles: ['admin','lead_facilitator'] },
-  { to: '/courses',   label: 'Curriculum',      roles: ['admin','lead_facilitator'] },
-  { to: '/inventory', label: 'Inventory',        roles: ['admin','lead_facilitator'] },
-  { to: '/incidents', label: 'Safety',           roles: ['admin','lead_facilitator'] },
   { to: '/',          label: 'Dashboard',        roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/games',     label: 'Catalog',          roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/sessions',  label: 'Session Planner',  roles: ['admin','lead_facilitator'] },
+  { to: '/courses',   label: 'Curriculum',      roles: ['admin','lead_facilitator'] },
+  { to: '/inventory', label: 'Inventory & Safety', roles: ['admin','lead_facilitator'] },
 ];
 
 export default function AppShell() {
-  const { profile, isAdmin, canPlan } = useProfile();
+  const { profile, isAdmin } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -77,24 +75,22 @@ export default function AppShell() {
                   }`
                 }
               >
-                Admin
+                Manage Toolkit
               </NavLink>
             )}
           </nav>
 
           {/* Action Area */}
           <div className="flex items-center gap-4">
-            {canPlan && (
-              <div className="relative group">
-                <button
-                  onClick={() => navigate('/sessions')}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md shadow-primary/10"
-                >
-                  <span className="material-symbols-outlined text-[20px]">assignment</span>
-                  <span className="hidden sm:inline">Session Plan</span>
-                </button>
-              </div>
-            )}
+            <div className="relative group">
+              <button
+                onClick={() => navigate('/sessions')}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md shadow-primary/10"
+              >
+                <span className="material-symbols-outlined text-[20px]">assignment</span>
+                <span className="hidden sm:inline">Session Plan</span>
+              </button>
+            </div>
 
             <div className="relative">
               <button

@@ -32,6 +32,9 @@ export default function TimelinePlanner() {
   const [showShare, setShowShare]     = useState(false);
   const [members, setMembers]         = useState([]);
   const [shareEmail, setShareEmail]   = useState('');
+  const [sites, setSites]             = useState([]);
+  const [groups, setGroups]           = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -60,14 +63,18 @@ export default function TimelinePlanner() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: sess }, , { data: gs }] = await Promise.all([
+      const [{ data: sess }, , { data: gs }, { data: st }, { data: gr }] = await Promise.all([
         supabase.from('sessions').select('*').eq('id', id).single(),
         loadBlocks(),
         supabase.from('games').select('*').eq('is_active', true).order('name'),
+        supabase.from('sites').select('*').order('name'),
+        supabase.from('groups').select('*').order('name'),
         loadMembers(),
       ]);
       if (sess) { setSession(sess); }
       setAllGames(gs || []);
+      setSites(st || []);
+      setGroups(gr || []);
       setLoading(false);
     }
     load();
@@ -121,6 +128,11 @@ export default function TimelinePlanner() {
     alert('AI Draft Generated!');
   }
 
+  async function updateSession(updates) {
+    const { data, error } = await supabase.from('sessions').update(updates).eq('id', id).select().single();
+    if (!error && data) setSession(data);
+  }
+
   async function addBlock(type, gameId = null, gameData = null) {
     if (!canEdit) return;
     const last = blocks[blocks.length - 1];
@@ -140,7 +152,41 @@ export default function TimelinePlanner() {
   if (loading) return <div className="p-10 text-slate-400">Loading planner...</div>;
 
   return (
-    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 md:px-10 py-10">
+    <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full px-4 md:px-10 py-10 bg-background-light min-h-screen font-display">
+      {/* Header Section */}
+      <div className="mb-8 border-b border-slate-200 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-[10px] mb-2">
+             <span className="material-symbols-outlined text-sm">event_available</span>
+             Session Detail
+          </div>
+          <h1 className="text-4xl font-black tracking-tight text-navy-deep">{stripEmojis(session?.name)}</h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-2xl">{session?.notes || 'No description provided.'}</p>
+          <div className="mt-4 flex flex-wrap gap-4 text-xs font-bold uppercase tracking-wide text-slate-400">
+             <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">location_on</span>
+                {sites.find(s => s.id === session?.site_id)?.name || 'No Site Set'}
+             </div>
+             <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">group</span>
+                {groups.find(g => g.id === session?.group_id)?.name || 'No Group Set'}
+             </div>
+          </div>
+        </div>
+        <div className="flex gap-3">
+           <button onClick={() => setShowSettings(true)} className="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-navy-600 font-bold text-sm hover:bg-slate-50 transition-all">
+              Settings
+           </button>
+           <button
+             onClick={() => navigate(`/sessions/${id}/facilitate`)}
+             className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+           >
+             <span className="material-symbols-outlined text-[20px]">play_circle</span>
+             Facilitate
+           </button>
+        </div>
+      </div>
+
       {/* Summary Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="flex flex-col gap-1 rounded-lg p-5 border border-slate-200 bg-white shadow-sm">
@@ -260,6 +306,53 @@ export default function TimelinePlanner() {
           onDelete={() => { setEditBlock(null); loadBlocks(); }}
           onClose={() => setEditBlock(null)}
         />
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <Modal onClose={() => setShowSettings(false)} title="Session Settings">
+           <div className="space-y-6">
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold uppercase tracking-widest">Session Name</label>
+                 <input
+                    value={session?.name}
+                    onChange={e => updateSession({ name: e.target.value })}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary"
+                 />
+              </div>
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold uppercase tracking-widest">Site / Location</label>
+                 <select
+                    value={session?.site_id || ''}
+                    onChange={e => updateSession({ site_id: e.target.value || null })}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none"
+                 >
+                    <option value="">Select Site...</option>
+                    {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                 </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold uppercase tracking-widest">Target Group</label>
+                 <select
+                    value={session?.group_id || ''}
+                    onChange={e => updateSession({ group_id: e.target.value || null })}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none"
+                 >
+                    <option value="">Select Group...</option>
+                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                 </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold uppercase tracking-widest">Description / Notes</label>
+                 <textarea
+                    value={session?.notes || ''}
+                    onChange={e => updateSession({ notes: e.target.value })}
+                    rows={4}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary resize-none"
+                 />
+              </div>
+           </div>
+        </Modal>
       )}
 
       {/* Share Modal */}

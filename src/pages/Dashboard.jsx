@@ -46,10 +46,10 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-        <StatCard label="Total Games" value={stats.games} trend="+4%" />
-        <StatCard label="Active Sessions" value={stats.sessions} trend="+12%" />
-        <StatCard label="Facilitators" value="42" trend="+2" />
-        <StatCard label="Satisfaction" value="4.9" highlight="CSAT" />
+        <Link to="/games"><StatCard label="Total Games" value={stats.games} trend="+4%" /></Link>
+        <Link to="/sessions"><StatCard label="Active Sessions" value={stats.sessions} trend="+12%" /></Link>
+        <Link to="/admin"><StatCard label="Facilitators" value="42" trend="+2" /></Link>
+        <Link to="/analytics"><StatCard label="Satisfaction" value="4.9" highlight="CSAT" /></Link>
       </div>
 
       {/* Recent Sessions Table */}
