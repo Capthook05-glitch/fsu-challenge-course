@@ -6,10 +6,10 @@ import { GOAL_KEYS, GOAL_META } from '../lib/goalMeta';
 import { Modal } from '../components/ui/Modal';
 
 const supabase = getSupabaseClient();
-const BLANK = { name: '', description: '', goals: [], size_min: '', size_max: '', constraints: '' };
+const BLANK = { name: '', description: '', goals: [], size_min: '', size_max: '', constraints: '', segment: '', contact_email: '', medical_info: '' };
 
 export default function GroupProfiles() {
-  const { profile } = useProfile();
+  const { profile, isAdmin } = useProfile();
   const [groups, setGroups]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -30,9 +30,12 @@ export default function GroupProfiles() {
   }
 
   async function save() {
-    const payload = { ...form, created_by: profile.id,
+    const payload = {
+      ...form,
+      created_by: profile.id,
       size_min: form.size_min ? parseInt(form.size_min) : null,
-      size_max: form.size_max ? parseInt(form.size_max) : null };
+      size_max: form.size_max ? parseInt(form.size_max) : null
+    };
     if (editing === 'new') {
       await supabase.from('groups').insert(payload);
     } else {
@@ -112,19 +115,30 @@ export default function GroupProfiles() {
                      className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
                 </div>
                 <div className="flex flex-col gap-2">
-                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Description</label>
-                   <input value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Contact Email</label>
+                   <input type="email" value={form.contact_email} onChange={e => setForm(f => ({...f, contact_email: e.target.value}))}
                      className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
                 </div>
                 <div className="flex flex-col gap-2">
-                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Min Size</label>
-                   <input type="number" value={form.size_min} onChange={e => setForm(f => ({...f, size_min: e.target.value}))}
-                     className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
+                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Participant Count (Min/Max)</label>
+                   <div className="flex gap-2">
+                      <input type="number" placeholder="Min" value={form.size_min} onChange={e => setForm(f => ({...f, size_min: e.target.value}))}
+                        className="flex-1 bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
+                      <input type="number" placeholder="Max" value={form.size_max} onChange={e => setForm(f => ({...f, size_max: e.target.value}))}
+                        className="flex-1 bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
+                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Max Size</label>
-                   <input type="number" value={form.size_max} onChange={e => setForm(f => ({...f, size_max: e.target.value}))}
-                     className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
+                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Demographic Segment</label>
+                   <select value={form.segment} onChange={e => setForm(f => ({...f, segment: e.target.value}))}
+                     className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none">
+                      <option value="">Select Option</option>
+                      <option value="Freshman">Freshman / First-Year</option>
+                      <option value="Student Org">Student Organization</option>
+                      <option value="Athletic">Athletic Team</option>
+                      <option value="Faculty">University Faculty/Staff</option>
+                      <option value="Corporate">Corporate / External</option>
+                   </select>
                 </div>
              </div>
 
@@ -143,9 +157,22 @@ export default function GroupProfiles() {
              </div>
 
              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-navy uppercase tracking-widest">Constraints / Notes</label>
+                <label className="text-xs font-bold text-navy uppercase tracking-widest">Description</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                   rows={2} className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none resize-none" />
+             </div>
+
+             <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-navy uppercase tracking-widest">Medical & Accessibility Considerations</label>
+                <textarea value={form.medical_info} onChange={e => setForm(f => ({...f, medical_info: e.target.value}))}
+                   placeholder="Confidential considerations..."
+                   rows={3} className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy border-l-4 border-l-primary focus:ring-2 focus:ring-primary outline-none resize-none" />
+             </div>
+
+             <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-navy uppercase tracking-widest">General Constraints / Notes</label>
                 <textarea value={form.constraints} onChange={e => setForm(f => ({...f, constraints: e.target.value}))}
-                   rows={4} className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none resize-none" />
+                   rows={3} className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none resize-none" />
              </div>
 
              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
