@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
 import { GoalTag } from '../components/ui/GoalTag';
+import { Modal } from '../components/ui/Modal';
+import { GOAL_META, GOAL_KEYS } from '../lib/goalMeta';
 
 const supabase = getSupabaseClient();
 
@@ -17,9 +19,6 @@ export default function Courses() {
   const [form, setForm]             = useState(EMPTY_COURSE);
   const [expanded, setExpanded]     = useState(null);
   const [courseData, setCourseData] = useState({}); // id → { sessions }
-  const [addingSession, setAddingSession] = useState(null); // courseId
-
-  const GOAL_KEYS = ['community-building','communication','energizer','leadership','problem-solving','trust'];
 
   useEffect(() => { load(); }, []);
 
@@ -28,7 +27,6 @@ export default function Courses() {
     const [courseRes, sessRes] = await Promise.all([
       supabase.from('courses').select('*').order('created_at', { ascending: false }),
       supabase.from('sessions').select('id,name,status')
-        .eq(canPlan && !profile?.role === 'admin' ? 'owner_id' : 'is_archived', canPlan ? profile.id : false)
         .eq('is_archived', false)
         .order('name'),
     ]);
@@ -63,27 +61,10 @@ export default function Courses() {
   }
 
   async function deleteCourse(id) {
-    if (!confirm('Delete this course and all its session links?')) return;
+    if (!confirm('Delete this course?')) return;
     await supabase.from('courses').delete().eq('id', id);
     setCourses(c => c.filter(x => x.id !== id));
     if (expanded === id) setExpanded(null);
-  }
-
-  async function addSessionToCourse(courseId, sessionId) {
-    const existing = courseData[courseId] || [];
-    if (existing.find(cs => cs.sessions?.id === sessionId)) return;
-    const pos = existing.length;
-    await supabase.from('course_sessions').insert({ course_id: courseId, session_id: sessionId, position: pos });
-    loadCourseDetail(courseId);
-    setAddingSession(null);
-  }
-
-  async function removeSessionFromCourse(courseId, csId) {
-    await supabase.from('course_sessions').delete().eq('id', csId);
-    setCourseData(prev => ({
-      ...prev,
-      [courseId]: prev[courseId].filter(cs => cs.id !== csId),
-    }));
   }
 
   function toggleGoal(key) {
@@ -102,7 +83,7 @@ export default function Courses() {
         </div>
         <div className="flex items-center gap-3">
            {canPlan && (
-             <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
+             <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-md">
                 <span className="material-symbols-outlined text-lg">add_circle</span>
                 New Course
              </button>
@@ -110,7 +91,6 @@ export default function Courses() {
         </div>
       </div>
 
-      {/* New Course Modal */}
       {showForm && (
         <Modal onClose={() => setShowForm(false)} title="New Course" wide>
           <div className="space-y-8">
@@ -135,7 +115,7 @@ export default function Courses() {
                       className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
                         form.goals.includes(k) ? 'bg-primary text-white border-primary' : 'bg-slate-100 text-slate-600 border-slate-200'
                       }`}>
-                      {k.replace(/-/g, ' ')}
+                      {GOAL_META[k].label}
                     </button>
                   ))}
                 </div>
@@ -159,7 +139,6 @@ export default function Courses() {
       ) : courses.length === 0 ? (
         <div className="bg-white dark:bg-background-dark border border-slate-200 dark:border-primary/20 rounded-xl p-12 text-center">
           <p className="text-slate-500 mb-2 font-bold uppercase tracking-widest text-xs">No curriculum found</p>
-          <p className="text-slate-400 text-sm">Create a course to organize sessions into a multi-day curriculum.</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-background-dark border border-slate-200 dark:border-primary/20 rounded-xl overflow-hidden shadow-sm">

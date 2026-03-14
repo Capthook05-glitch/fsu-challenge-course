@@ -31,10 +31,14 @@ export default function AdminPanel() {
   function openEdit(g) { setEditing(g.id); setForm(g); }
 
   async function saveGame() {
+    const payload = {
+      ...form,
+      name: stripEmojis(form.name)
+    };
     if (editing === 'new') {
-      await supabase.from('games').insert(form);
+      await supabase.from('games').insert(payload);
     } else {
-      await supabase.from('games').update(form).eq('id', editing);
+      await supabase.from('games').update(payload).eq('id', editing);
     }
     setEditing(null);
     loadGames();
@@ -166,22 +170,87 @@ export default function AdminPanel() {
                   </div>
 
                   <div className="space-y-4">
-                     <label className="text-xs font-bold text-navy dark:text-accent-gold uppercase tracking-widest block">Group Size</label>
+                     <label className="text-xs font-bold text-navy uppercase tracking-widest block">Group Size</label>
                      <div className="flex items-center gap-4">
-                        <input
-                           type="number"
-                           value={form.min_group}
-                           onChange={e => setForm({...form, min_group: parseInt(e.target.value)})}
-                           className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white outline-none"
-                           placeholder="Min"
-                        />
-                        <input
-                           type="number"
-                           value={form.max_group}
-                           onChange={e => setForm({...form, max_group: parseInt(e.target.value)})}
-                           className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white outline-none"
-                           placeholder="Max"
-                        />
+                        <div className="flex-1">
+                           <p className="text-[10px] text-slate-500 mb-1 font-bold">MIN</p>
+                           <input
+                              type="number"
+                              value={form.min_group}
+                              onChange={e => setForm({...form, min_group: parseInt(e.target.value)})}
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-navy outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="4"
+                           />
+                        </div>
+                        <div className="flex-1">
+                           <p className="text-[10px] text-slate-500 mb-1 font-bold">MAX</p>
+                           <input
+                              type="number"
+                              value={form.max_group}
+                              onChange={e => setForm({...form, max_group: parseInt(e.target.value)})}
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-navy outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="20"
+                           />
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="space-y-4">
+                     <label className="text-xs font-bold text-navy uppercase tracking-widest block">Duration (Mins)</label>
+                     <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                           <p className="text-[10px] text-slate-500 mb-1 font-bold">MIN</p>
+                           <input
+                              type="number"
+                              value={form.time_min}
+                              onChange={e => setForm({...form, time_min: parseInt(e.target.value)})}
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-navy outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="10"
+                           />
+                        </div>
+                        <div className="flex-1">
+                           <p className="text-[10px] text-slate-500 mb-1 font-bold">MAX</p>
+                           <input
+                              type="number"
+                              value={form.time_max}
+                              onChange={e => setForm({...form, time_max: parseInt(e.target.value)})}
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-navy outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="30"
+                           />
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label className="text-xs font-bold text-navy uppercase tracking-widest block">Activity Level</label>
+                     <select
+                        value={form.activity_level}
+                        onChange={e => setForm({...form, activity_level: e.target.value})}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-3 text-navy outline-none appearance-none focus:ring-1 focus:ring-primary"
+                     >
+                        <option value="low">Low (Stationary)</option>
+                        <option value="medium">Medium (Movement)</option>
+                        <option value="high">High (Active Running)</option>
+                     </select>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label className="text-xs font-bold text-navy uppercase tracking-widest block">Setting</label>
+                     <div className="flex p-1 bg-slate-100 rounded-lg border border-slate-200">
+                        {['indoor', 'outdoor', 'both'].map(s => (
+                           <button
+                              key={s}
+                              type="button"
+                              onClick={() => setForm({...form, setting: s === 'both' ? ['indoor','outdoor'] : [s]})}
+                              className={`flex-1 py-2 text-sm font-semibold rounded transition-all ${
+                                 (s === 'both' && form.setting?.length === 2) || (form.setting?.length === 1 && form.setting[0] === s)
+                                    ? 'bg-white shadow-sm text-primary'
+                                    : 'text-slate-500 hover:text-navy'
+                              }`}
+                           >
+                              {s.charAt(0).toUpperCase() + s.slice(1)}
+                           </button>
+                        ))}
                      </div>
                   </div>
                </div>

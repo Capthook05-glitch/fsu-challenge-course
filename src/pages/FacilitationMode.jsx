@@ -48,6 +48,16 @@ export default function FacilitationMode() {
     return () => clearInterval(intervalRef.current);
   }, [running]);
 
+  async function logAction() {
+     await supabase.from('block_logs').insert({
+        block_id: block.id,
+        session_id: id,
+        what_happened: `Facilitator logged action at ${new Date().toLocaleTimeString()}`,
+        submitted_by: profile.id
+     });
+     alert('Progress logged!');
+  }
+
   function resetTimer() { setElapsed(0); setRunning(false); }
   function nextBlock() { if (idx < blocks.length - 1) { setIdx(i => i+1); resetTimer(); } }
   function prevBlock() { if (idx > 0) { setIdx(i => i-1); resetTimer(); } }
@@ -203,6 +213,10 @@ export default function FacilitationMode() {
       {/* Footer */}
       <footer className="mt-auto px-6 py-5 bg-white border-t border-slate-200 flex justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-6">
+          <button onClick={logAction} className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded text-[10px] font-bold uppercase hover:bg-primary/20 transition-colors">
+             <span className="material-symbols-outlined text-xs">edit_note</span>
+             Log Progress
+          </button>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 text-[10px] font-bold uppercase tracking-wider">
             <span className={`h-1.5 w-1.5 rounded-full bg-green-600 ${running ? 'animate-pulse' : ''}`}></span> Live Session
           </div>

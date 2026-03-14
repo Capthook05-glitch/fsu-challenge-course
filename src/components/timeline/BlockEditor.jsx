@@ -55,23 +55,28 @@ export function BlockEditor({ block, allGames = [], onSave, onDelete, onClose })
   }
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-fsu-surface border-l border-fsu-border shadow-xl flex flex-col z-50">
+    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl flex flex-col z-50 font-display">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-fsu-border flex items-center justify-between">
-        <h2 className="font-syne font-bold text-fsu-text">Edit Block</h2>
-        <button onClick={onClose} className="text-fsu-muted hover:text-fsu-text text-xl leading-none">×</button>
+      <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <h2 className="text-xl font-bold tracking-tight text-navy flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary">edit_note</span>
+          Edit Block
+        </h2>
+        <button onClick={onClose} className="text-slate-400 hover:text-navy transition-colors">
+          <span className="material-symbols-outlined">close</span>
+        </button>
       </div>
 
       {/* Fields */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
         {/* Block type */}
-        <div>
-          <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5 block">Block Type</label>
-          <div className="flex flex-wrap gap-1.5">
+        <div className="space-y-3">
+          <label className="text-xs font-bold text-navy uppercase tracking-widest block">Block Type</label>
+          <div className="flex flex-wrap gap-2">
             {BLOCK_TYPES.map(t => (
               <button key={t} onClick={() => set('block_type', t)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium border capitalize transition-colors ${
-                  form.block_type === t ? 'bg-fsu-garnet text-white border-fsu-garnet' : 'border-fsu-border text-fsu-muted hover:border-fsu-border2'
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                  form.block_type === t ? 'bg-primary text-white border-primary shadow-md' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                 }`}>{t}</button>
             ))}
           </div>
@@ -79,16 +84,16 @@ export function BlockEditor({ block, allGames = [], onSave, onDelete, onClose })
 
         {/* Game picker (activity type) */}
         {form.block_type === 'activity' && (
-          <div>
-            <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5 block">Activity</label>
+          <div className="space-y-4">
+            <label className="text-xs font-bold text-navy uppercase tracking-widest block">Activity</label>
             <input value={gameSearch} onChange={e => setGameSearch(e.target.value)}
               placeholder="Search activities..."
-              className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text mb-2" />
-            <div className="max-h-40 overflow-y-auto space-y-1 border border-fsu-border rounded-lg">
+              className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm focus:ring-1 focus:ring-primary outline-none" />
+            <div className="max-h-40 overflow-y-auto space-y-1 border border-slate-100 rounded-lg p-1">
               {filteredGames.slice(0,20).map(g => (
                 <button key={g.id} onClick={() => { set('game_id', g.id); set('title', g.name); set('duration_min', g.time_min || 20); }}
-                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                    form.game_id === g.id ? 'bg-fsu-garnet/10 text-fsu-garnet font-medium' : 'text-fsu-text hover:bg-fsu-soft'
+                  className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                    form.game_id === g.id ? 'bg-primary/10 text-primary font-bold' : 'text-slate-600 hover:bg-slate-50'
                   }`}>
                   {g.name}
                 </button>
@@ -102,69 +107,61 @@ export function BlockEditor({ block, allGames = [], onSave, onDelete, onClose })
           <DebriefPicker selected={debriefSet} onSelect={handleDebriefSelect} />
         )}
 
-        {/* Title (non-activity or override) */}
-        <div>
-          <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">
+        {/* Title */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-navy uppercase tracking-widest">
             {form.block_type === 'activity' ? 'Title Override' : 'Title'}
           </label>
           <input value={form.title || ''} onChange={e => set('title', e.target.value)}
-            placeholder={form.block_type === 'activity' ? 'Leave blank to use activity name' : 'Block title...'}
-            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+            placeholder={form.block_type === 'activity' ? 'Leave blank for activity name' : 'Block title...'}
+            className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Duration (min)</label>
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-navy uppercase tracking-widest">Duration</label>
             <input type="number" value={form.duration_min} onChange={e => set('duration_min', e.target.value)}
-              className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+              className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
           </div>
-          <div>
-            <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Start (min from 0)</label>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-navy uppercase tracking-widest">Start Time</label>
             <input type="number" value={form.start_time} onChange={e => set('start_time', e.target.value)}
-              className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+              className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
           </div>
         </div>
 
-        <div>
-          <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Location</label>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-navy uppercase tracking-widest">Location</label>
           <input value={form.location || ''} onChange={e => set('location', e.target.value)}
-            placeholder="e.g. Low Ropes Area, Pavilion..."
-            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+            placeholder="e.g. Pavilion, Course..."
+            className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
         </div>
 
-        <div>
-          <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Subgroup</label>
-          <input value={form.subgroup || ''} onChange={e => set('subgroup', e.target.value)}
-            placeholder="e.g. Group A, Full Group..."
-            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Assigned Facilitator</label>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-navy uppercase tracking-widest">Facilitator</label>
           <input value={form.assigned_facilitator || ''} onChange={e => set('assigned_facilitator', e.target.value)}
-            placeholder="e.g. Alex, Team B Lead..."
-            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
+            placeholder="Assign to..."
+            className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
         </div>
 
         {form.block_type !== 'debrief' && (
-          <div>
-            <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Facilitator Notes</label>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-navy uppercase tracking-widest">Notes</label>
             <textarea value={form.notes || ''} onChange={e => set('notes', e.target.value)}
-              rows={4} placeholder="Notes for this block..."
-              className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
+              rows={4} placeholder="Framing, safety, tips..."
+              className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none resize-none" />
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-fsu-border flex gap-2">
-        <button onClick={handleSave}
-          className="flex-1 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
-          Save Block
+      <div className="px-8 py-6 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+        <button onClick={handleDelete} className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+           <span className="material-symbols-outlined text-lg">delete</span>
+           Delete
         </button>
-        <button onClick={handleDelete}
-          className="border border-red-200 text-red-500 hover:bg-red-50 px-3 py-2.5 rounded-xl text-sm transition-colors">
-          Delete
+        <button onClick={handleSave} className="px-8 py-2 text-sm font-bold text-white bg-primary hover:bg-primary/95 rounded-lg shadow-md transition-all">
+           Save Changes
         </button>
       </div>
     </div>

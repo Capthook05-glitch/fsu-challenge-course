@@ -52,7 +52,7 @@ export default function FeedbackForm() {
       what_worked: whatWorked,
       what_improve: whatImprove,
       group_size: groupSize ? parseInt(groupSize) : null,
-      // Store extra fields in what_worked if no dedicated columns
+      submitted_by: null // Participant feedback is anonymous in this portal
     });
     if (err) { setError('Something went wrong. Please try again.'); return; }
     setSubmitted(true);

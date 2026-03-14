@@ -48,51 +48,50 @@ export function DebriefPicker({ selected, onSelect }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide">Question Sets</p>
+        <p className="text-xs font-bold text-navy uppercase tracking-widest">Question Sets</p>
         <button onClick={() => setCreating(c => !c)}
-          className="text-xs text-fsu-garnet hover:underline font-medium">
-          {creating ? 'Cancel' : '+ Custom Set'}
+          className="text-xs font-bold text-primary hover:underline uppercase">
+          {creating ? 'Cancel' : '+ Custom'}
         </button>
       </div>
 
       {creating && (
-        <div className="bg-fsu-soft border border-fsu-border rounded-xl p-3 space-y-2">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4 shadow-inner">
           <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
             placeholder="Set title..."
-            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text bg-fsu-surface" />
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" />
           <textarea value={newQuestions} onChange={e => setNewQuestions(e.target.value)}
-            placeholder="One question per line..." rows={4}
-            className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text bg-fsu-surface resize-none" />
+            placeholder="One question per line..." rows={3}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none resize-none" />
           <div>
-            <p className="text-xs text-fsu-muted mb-1">Theory tags</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Theory Tags</p>
+            <div className="flex flex-wrap gap-1.5">
               {Object.entries(THEORY_STYLE).map(([k, v]) => (
                 <button key={k} onClick={() => toggleTag(k)}
-                  className="text-xs font-medium px-2 py-0.5 rounded-full border transition-colors"
-                  style={newTags.includes(k)
-                    ? { background: v.bg, color: v.color, borderColor: v.color + '55' }
-                    : { background: 'transparent', color: '#78716C', borderColor: '#E8E2D9' }}>
+                  className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-all ${
+                    newTags.includes(k) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-400 border-slate-200'
+                  }`}>
                   {v.label}
                 </button>
               ))}
             </div>
           </div>
           <button onClick={saveNew}
-            className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-            Save Set
+            className="w-full bg-primary text-white py-2 rounded-lg text-xs font-bold shadow-sm">
+            Save Custom Set
           </button>
         </div>
       )}
 
-      <div className="space-y-2 max-h-72 overflow-y-auto">
+      <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
         {sets.map(s => {
           const isSelected = selected?.id === s.id;
           return (
             <button key={s.id} onClick={() => onSelect(s)}
-              className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                isSelected ? 'border-fsu-garnet bg-fsu-garnet/5' : 'border-fsu-border bg-fsu-surface hover:border-fsu-border2'
+              className={`w-full text-left p-4 rounded-xl border transition-all ${
+                isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-slate-100 bg-white hover:border-primary/30'
               }`}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-sm font-semibold text-fsu-text">{s.title}</p>
