@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
+import { stripEmojis } from '../lib/utils';
 
 const supabase = getSupabaseClient();
 
@@ -83,139 +84,96 @@ export default function FeedbackForm() {
   }
 
   return (
-    <div className="min-h-screen bg-fsu-white">
-      {/* Header */}
-      <div className="bg-fsu-garnet text-white px-4 py-4">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 bg-fsu-gold rounded-lg flex items-center justify-center font-syne font-bold text-fsu-garnet text-xs">FSU</div>
-            <span className="text-xs text-white/70">Participant Portal</span>
-          </div>
-          <h1 className="font-syne font-bold text-lg">{session?.name || 'Session'}</h1>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+      <header className="flex items-center justify-between border-b border-primary/10 px-6 md:px-20 py-4 bg-white dark:bg-background-dark">
+         <div className="flex items-center gap-4 text-primary">
+            <span className="material-symbols-outlined text-3xl">landscape</span>
+            <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold">FSU Challenge Course</h2>
+         </div>
+      </header>
 
-      {/* Tabs */}
-      <div className="bg-fsu-surface border-b border-fsu-border">
-        <div className="max-w-lg mx-auto flex">
-          {['program','feedback'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 text-sm font-medium capitalize transition-colors border-b-2 ${
-                activeTab === tab ? 'border-fsu-garnet text-fsu-garnet' : 'border-transparent text-fsu-muted hover:text-fsu-text'
-              }`}>
-              {tab === 'program' ? 'Today\'s Program' : 'Leave Feedback'}
-            </button>
-          ))}
-        </div>
-      </div>
+      <main className="flex flex-1 justify-center py-8 px-4 md:px-0">
+         <div className="max-w-[800px] flex-1 flex flex-col">
+            <div className="flex flex-col gap-2 p-4 border-l-4 border-primary mb-8">
+               <p className="text-primary text-sm font-bold uppercase tracking-widest">Administrative Portal</p>
+               <h1 className="text-4xl font-extrabold tracking-tight">Facilitator Evaluation</h1>
+               <p className="text-slate-600 dark:text-slate-400 text-lg font-normal">Lead Review & Performance Feedback Loop</p>
+            </div>
 
-      <div className="max-w-lg mx-auto p-4">
-        {/* Program view */}
-        {activeTab === 'program' && (
-          <div className="space-y-3 py-2">
-            <p className="text-xs text-fsu-muted mb-3">Here's what's on the schedule for today.</p>
-            {blocks.map(block => {
-              const color = TYPE_COLORS[block.block_type] || '#78716C';
-              const label = TYPE_LABELS[block.block_type] || 'Block';
-              return (
-                <div key={block.id} className="bg-fsu-surface border border-fsu-border rounded-xl overflow-hidden flex">
-                  <div className="w-1 flex-shrink-0" style={{ background: color }} />
-                  <div className="flex-1 px-4 py-3">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-semibold" style={{ color }}>{label}</span>
-                      <span className="text-xs text-fsu-faint">{fmtTime(block.start_time)} · {block.duration_min} min</span>
-                    </div>
-                    <p className="text-sm font-medium text-fsu-text">{block.title || label}</p>
-                    {block.location && <p className="text-xs text-fsu-muted mt-0.5">{block.location}</p>}
-                    {block.subgroup && <p className="text-xs text-fsu-faint">{block.subgroup}</p>}
+            <div className="bg-white dark:bg-primary/5 rounded-xl p-6 mb-8 border border-primary/10 shadow-sm flex flex-wrap gap-8">
+               <div className="flex flex-col">
+                  <span className="text-xs font-bold text-primary uppercase">Session</span>
+                  <span className="text-base font-semibold">{stripEmojis(session?.name) || 'Loading...'}</span>
+               </div>
+               <div className="flex flex-col border-l border-primary/10 pl-8">
+                  <span className="text-xs font-bold text-primary uppercase">Date</span>
+                  <span className="text-base font-semibold">{new Date().toLocaleDateString()}</span>
+               </div>
+            </div>
+
+            <section className="mb-10">
+               <h2 className="text-xl font-bold border-b border-primary/10 pb-4 mb-6">Quantitative Assessment</h2>
+               <div className="space-y-4">
+                  <RatingRow label="Group Engagement" sub="Ability to sustain participant focus" rating={rating} setRating={setRating} hovered={hovered} setHovered={setHovered} />
+               </div>
+            </section>
+
+            <form onSubmit={submit} className="grid grid-cols-1 gap-8 mb-10">
+               <div className="flex flex-col gap-3">
+                  <label className="text-lg font-bold">Peer Feedback & Coaching Notes</label>
+                  <textarea
+                    value={whatWorked} onChange={e => setWhatWorked(e.target.value)}
+                    className="w-full min-h-[160px] rounded-xl border border-primary/20 bg-white dark:bg-primary/5 p-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="Provide constructive observations..."
+                  />
+               </div>
+               <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                     <label className="text-lg font-bold">Incident Log</label>
+                     <span className="text-xs font-semibold text-slate-400">LEAVE BLANK IF NONE</span>
                   </div>
-                </div>
-              );
-            })}
-            {blocks.length === 0 && (
-              <p className="text-fsu-muted text-sm text-center py-8">No program blocks available.</p>
-            )}
-            <button onClick={() => setActiveTab('feedback')}
-              className="w-full mt-4 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-3 rounded-xl font-semibold text-sm transition-colors">
-              Leave Feedback
-            </button>
-          </div>
-        )}
+                  <textarea
+                    value={whatImprove} onChange={e => setWhatImprove(e.target.value)}
+                    className="w-full min-h-[120px] rounded-xl border border-primary/20 bg-white dark:bg-primary/5 p-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="Detail any technical issues or concerns..."
+                  />
+               </div>
 
-        {/* Feedback form */}
-        {activeTab === 'feedback' && (
-          <form onSubmit={submit} className="space-y-5 py-2">
-            <div>
-              <label className="text-sm font-semibold text-fsu-text block mb-2">How was the session? *</label>
-              <div className="flex gap-2">
-                {[1,2,3,4,5].map(n => (
-                  <button
-                    key={n} type="button"
-                    onClick={() => setRating(n)}
-                    onMouseEnter={() => setHovered(n)}
-                    onMouseLeave={() => setHovered(0)}
-                    className="text-3xl transition-transform hover:scale-110"
-                    style={{ color: n <= (hovered || rating) ? '#CEB069' : '#E8E2D9' }}
-                  >
-                    ★
+               <div className="flex flex-col items-center border-t border-primary/10 pt-10">
+                  <div className="flex items-center gap-2 mb-6 text-slate-500 text-sm italic">
+                     <span className="material-symbols-outlined text-sm">info</span>
+                     This review will be shared with the program director.
+                  </div>
+                  <button type="submit" className="bg-primary hover:bg-primary/90 text-white font-bold py-4 px-12 rounded-xl text-lg shadow-lg transition-all w-full md:w-auto">
+                     Submit Review
                   </button>
-                ))}
-              </div>
-            </div>
+                  {error && <p className="text-red-600 mt-4">{error}</p>}
+               </div>
+            </form>
+         </div>
+      </main>
+    </div>
+  );
+}
 
-            <div>
-              <label className="text-sm font-medium text-fsu-text block mb-1">What worked well?</label>
-              <textarea
-                value={whatWorked} onChange={e => setWhatWorked(e.target.value)} rows={3}
-                className="w-full border border-fsu-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none"
-                placeholder="Share what you enjoyed or found effective..."
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-fsu-text block mb-1">What could be improved?</label>
-              <textarea
-                value={whatImprove} onChange={e => setWhatImprove(e.target.value)} rows={3}
-                className="w-full border border-fsu-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none"
-                placeholder="What would make this better next time?"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-fsu-text block mb-1">My biggest takeaway</label>
-              <textarea
-                value={takeaway} onChange={e => setTakeaway(e.target.value)} rows={2}
-                className="w-full border border-fsu-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none"
-                placeholder="One thing I'm taking away from today..."
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-fsu-text block mb-1">My goal for next time</label>
-              <textarea
-                value={goalNext} onChange={e => setGoalNext(e.target.value)} rows={2}
-                className="w-full border border-fsu-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none"
-                placeholder="Something I want to work on or try next time..."
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-fsu-text block mb-1">Group size (optional)</label>
-              <input
-                type="number" value={groupSize} onChange={e => setGroupSize(e.target.value)} min="1"
-                className="border border-fsu-border rounded-xl px-3 py-2 text-sm w-32 focus:outline-none focus:border-fsu-garnet text-fsu-text"
-                placeholder="e.g. 24"
-              />
-            </div>
-
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-
-            <button type="submit"
-              className="w-full bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-3 rounded-xl font-semibold text-sm transition-colors">
-              Submit Feedback
-            </button>
-          </form>
-        )}
+function RatingRow({ label, sub, rating, setRating, hovered, setHovered }) {
+  return (
+    <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white dark:bg-primary/10 rounded-lg border border-primary/5">
+      <div className="flex items-center gap-4 mb-3 md:mb-0">
+        <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+          <span className="material-symbols-outlined">groups</span>
+        </div>
+        <div>
+          <p className="font-bold">{label}</p>
+          <p className="text-slate-500 text-sm">{sub}</p>
+        </div>
+      </div>
+      <div className="flex gap-1">
+        {[1,2,3,4,5].map(n => (
+           <button key={n} type="button" onClick={() => setRating(n)} onMouseEnter={() => setHovered(n)} onMouseLeave={() => setHovered(0)}>
+              <span className={`material-symbols-outlined ${n <= (hovered || rating) ? 'text-primary' : 'text-slate-300'}`} style={{ fontVariationSettings: n <= (hovered || rating) ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+           </button>
+        ))}
       </div>
     </div>
   );

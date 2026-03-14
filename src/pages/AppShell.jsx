@@ -34,14 +34,14 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background-dark/80 backdrop-blur-md px-6 lg:px-12 py-4 no-print">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 lg:px-12 py-4 no-print">
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4">
           {/* Logo Section */}
           <Link to="/" className="flex items-center gap-3 shrink-0">
-            <span className="text-2xl">🌲</span>
+            <span className="material-symbols-outlined text-primary text-3xl">forest</span>
             <div className="flex flex-col leading-tight">
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-100 uppercase leading-none">FSU Challenge Course</h1>
-              <span className="text-xs font-semibold text-accent-gold tracking-widest uppercase mt-0.5">Facilitator Toolkit</span>
+              <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white uppercase leading-none">FSU Challenge Course</h1>
+              <span className="text-[10px] font-bold text-accent-gold tracking-widest uppercase mt-0.5">Facilitator Toolkit</span>
             </div>
           </Link>
 
@@ -52,10 +52,10 @@ export default function AppShell() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `px-5 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  `px-5 py-2 rounded-lg text-sm transition-colors ${
                     isActive
-                      ? 'bg-primary/10 text-primary border border-primary/20 font-bold'
-                      : 'text-slate-400 hover:text-slate-100'
+                      ? 'bg-primary/5 text-primary border border-primary/10 font-bold'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-navy-deep dark:hover:text-white font-medium'
                   }`
                 }
               >
@@ -66,10 +66,10 @@ export default function AppShell() {
                <NavLink
                 to="/admin"
                 className={({ isActive }) =>
-                  `px-5 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  `px-5 py-2 rounded-lg text-sm transition-colors ${
                     isActive
-                      ? 'bg-primary/10 text-primary border border-primary/20 font-bold'
-                      : 'text-slate-400 hover:text-slate-100'
+                      ? 'bg-primary/5 text-primary border border-primary/10 font-bold'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-navy-deep dark:hover:text-white font-medium'
                   }`
                 }
               >
@@ -83,7 +83,7 @@ export default function AppShell() {
             <div className="relative group">
               <button
                 onClick={() => navigate('/sessions')}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-primary/20"
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md shadow-primary/10"
               >
                 <span className="material-symbols-outlined text-[20px]">assignment</span>
                 <span className="hidden sm:inline">Session Plan</span>
@@ -93,17 +93,17 @@ export default function AppShell() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="size-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center overflow-hidden focus:outline-none"
+                className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden focus:outline-none"
               >
                 {profile?.avatar_url ? (
                    <img className="w-full h-full object-cover" alt="User avatar" src={profile.avatar_url} />
                 ) : (
-                  <span className="material-symbols-outlined text-slate-100">account_circle</span>
+                  <span className="material-symbols-outlined text-slate-400">account_circle</span>
                 )}
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-background-dark border border-primary/20 rounded-lg shadow-xl py-2 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-primary/10 mb-2">
                     <p className="text-sm font-bold truncate">{profile?.name || profile?.email}</p>
                     <p className="text-xs text-slate-400">{ROLE_LABEL[role]}</p>
@@ -127,16 +127,16 @@ export default function AppShell() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-background-dark/50 py-12 px-6 lg:px-12 text-center text-slate-500 no-print">
-        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3 grayscale opacity-60">
-            <span className="text-xl">🌲</span>
-            <p className="text-xs font-bold uppercase tracking-widest">FSU Challenge Course Toolkit © 2024</p>
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark py-16 px-6 lg:px-12 text-slate-500 no-print">
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-slate-300 dark:text-slate-700 text-2xl">forest</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">FSU Challenge Course Toolkit © 2024</p>
           </div>
-          <div className="flex gap-8 text-xs font-bold uppercase tracking-widest">
+          <div className="flex gap-10 text-[10px] font-black uppercase tracking-widest">
             <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
             <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>
-            <a className="hover:text-primary transition-colors" href="#">Contact Admin</a>
+            <a className="hover:text-primary transition-colors" href="#">Contact Administration</a>
           </div>
         </div>
       </footer>

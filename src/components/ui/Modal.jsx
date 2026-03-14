@@ -11,16 +11,16 @@ export function Modal({ onClose, children, title, wide = false, open = true }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`bg-slate-900 border border-primary/20 rounded-xl w-full ${wide ? 'max-w-4xl' : 'max-w-lg'} max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
-        <div className="px-8 py-6 border-b border-primary/10 flex justify-between items-center bg-gradient-to-r from-primary/10 to-transparent">
+    <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className={`bg-white border border-slate-200 rounded-xl w-full ${wide ? 'max-w-4xl' : 'max-w-lg'} max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
+        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-accent-gold">info</span>
-              {title || 'Information'}
+            <h2 className="text-2xl font-bold tracking-tight text-navy flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">edit_note</span>
+              {title || 'Add/Edit'}
             </h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-slate-400 hover:text-navy transition-colors">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>

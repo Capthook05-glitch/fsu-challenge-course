@@ -17,62 +17,66 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative flex flex-col md:flex-row md:items-center gap-4 bg-slate-800/30 border border-slate-700/50 p-4 rounded-xl hover:border-primary/50 transition-all"
+      className="group relative flex flex-col md:flex-row md:items-center gap-4 bg-white border border-slate-200 p-5 rounded-lg hover:border-primary/40 hover:shadow-md transition-all"
     >
       <div className="flex items-center gap-3 shrink-0">
         {!readOnly && (
-           <div {...attributes} {...listeners} className="cursor-grab text-slate-600 group-hover:text-slate-400 transition-colors">
+           <div {...attributes} {...listeners} className="cursor-grab text-slate-300 group-hover:text-slate-500 transition-colors">
               <span className="material-symbols-outlined">drag_indicator</span>
            </div>
         )}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
+        <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white text-sm font-bold">
           {index + 1}
         </div>
       </div>
 
       <div className="flex-1 flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-white font-bold text-lg">{title}</h3>
-          <span className="text-slate-500 text-xs font-medium bg-slate-800 px-2 py-0.5 rounded capitalize">
+        <div className="flex flex-wrap items-center gap-3">
+          <h3 className="text-navy-900 font-extrabold text-lg">{title}</h3>
+          <span className="text-navy-600 text-[11px] font-bold bg-slate-100 px-2 py-0.5 rounded uppercase tracking-wider">
             {block.block_type}
           </span>
-          <div className="flex gap-1 ml-auto md:ml-0">
-             {game?.goals?.map(g => <GoalTag key={g} goal={g} size="sm" />)}
+          <div className="flex gap-2 ml-auto md:ml-0">
+             {game?.goals?.map(g => (
+               <span key={g} className="text-primary text-[10px] font-extrabold px-2 py-0.5 rounded border border-primary/20 bg-primary/5 uppercase">
+                 {g.replace(/-/g, ' ')}
+               </span>
+             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-slate-400 text-sm">
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">schedule</span> {block.duration_min} min
+        <div className="flex items-center gap-4 text-navy-600 text-sm font-medium">
+          <span className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-sm opacity-60">schedule</span> {block.duration_min} min
           </span>
           {game && (
-             <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">groups</span> {game.min_group}-{game.max_group} pax
+             <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm opacity-60">groups</span> {game.min_group}-{game.max_group} pax
              </span>
           )}
           {block.location && (
-             <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">location_on</span> {block.location}
+             <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm opacity-60">location_on</span> {block.location}
              </span>
           )}
         </div>
 
         {(block.notes || game?.description) && (
-          <div className="mt-2 p-3 bg-background-dark/50 rounded-lg border-l-2 border-primary/50">
-            <p className="text-slate-400 text-xs italic">
-               {block.notes || game?.description}
+          <div className="mt-3 p-3 bg-slate-50 rounded border-l-4 border-primary/40">
+            <p className="text-navy-600 text-xs italic font-medium">
+               Notes: {block.notes || game?.description}
             </p>
           </div>
         )}
       </div>
 
       {!readOnly && (
-        <div className="flex md:flex-col items-center gap-2 shrink-0 self-end md:self-center">
+        <div className="flex md:flex-col items-center gap-1 shrink-0 self-end md:self-center">
           <button
             onClick={() => onEdit(block)}
-            className="p-2 text-slate-500 hover:text-white transition-colors"
+            className="p-2 text-slate-400 hover:text-navy-900 transition-colors"
           >
-            <span className="material-symbols-outlined">edit</span>
+            <span className="material-symbols-outlined text-xl">edit</span>
           </button>
         </div>
       )}

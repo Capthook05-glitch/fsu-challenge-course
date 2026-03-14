@@ -94,164 +94,144 @@ export default function Courses() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-syne font-bold text-2xl text-fsu-text">Training Curriculum</h1>
-          <p className="text-fsu-muted text-sm mt-1">Organize sessions into multi-day courses and learning progressions.</p>
+    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 bg-background-light dark:bg-background-dark min-h-screen font-display">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="space-y-1">
+          <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">Curriculum Management</h2>
+          <p className="text-slate-500 dark:text-slate-400 max-w-2xl">Organize sessions into multi-day courses and tracked learning progressions.</p>
         </div>
-        {canPlan && (
-          <button onClick={() => setShowForm(true)}
-            className="bg-fsu-garnet hover:bg-fsu-garnet2 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
-            + New Course
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+           {canPlan && (
+             <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
+                <span className="material-symbols-outlined text-lg">add_circle</span>
+                New Course
+             </button>
+           )}
+        </div>
       </div>
 
       {/* New Course Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-          <div className="bg-fsu-surface rounded-2xl shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-fsu-border flex items-center justify-between">
-              <h2 className="font-syne font-bold text-fsu-text">New Course</h2>
-              <button onClick={() => setShowForm(false)} className="text-fsu-muted hover:text-fsu-text text-xl">×</button>
-            </div>
-            <div className="px-6 py-4 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Course Name *</label>
-                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Leadership Retreat Series"
-                  className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1 block">Description</label>
-                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="What is this curriculum designed to achieve?"
-                  className="w-full border border-fsu-border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-fsu-garnet text-fsu-text resize-none" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5 block">Goals</label>
-                <div className="flex flex-wrap gap-1.5">
+        <Modal onClose={() => setShowForm(false)} title="New Course" wide>
+          <div className="space-y-8">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col gap-2">
+                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Course Name</label>
+                   <input value={form.name} onChange={e => setForm({...form, name: e.target.value})}
+                     className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div className="flex flex-col gap-2">
+                   <label className="text-xs font-bold text-navy uppercase tracking-widest">Description</label>
+                   <input value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+                     className="w-full bg-white border border-slate-200 rounded-lg py-3 px-4 text-navy focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+             </div>
+
+             <div className="space-y-3">
+                <label className="text-xs font-bold text-navy uppercase tracking-widest">Target Goals</label>
+                <div className="flex flex-wrap gap-2">
                   {GOAL_KEYS.map(k => (
                     <button key={k} onClick={() => toggleGoal(k)}
-                      className={`px-2.5 py-1 rounded-lg text-xs capitalize border transition-colors ${
-                        form.goals.includes(k) ? 'bg-fsu-garnet text-white border-fsu-garnet' : 'border-fsu-border text-fsu-muted hover:border-fsu-border2'
-                      }`}>{k.replace('-', ' ')}</button>
+                      className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                        form.goals.includes(k) ? 'bg-primary text-white border-primary' : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                      {k.replace(/-/g, ' ')}
+                    </button>
                   ))}
                 </div>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.is_public} onChange={e => setForm(f => ({ ...f, is_public: e.target.checked }))} />
-                <span className="text-sm text-fsu-text">Make visible to all facilitators</span>
-              </label>
-            </div>
-            <div className="px-6 py-4 border-t border-fsu-border flex gap-3">
-              <button onClick={saveCourse} disabled={!form.name.trim()}
-                className="flex-1 bg-fsu-garnet hover:bg-fsu-garnet2 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
-                Create Course
-              </button>
-              <button onClick={() => setShowForm(false)}
-                className="border border-fsu-border text-fsu-muted px-4 py-2.5 rounded-xl text-sm">
-                Cancel
-              </button>
-            </div>
+             </div>
+
+             <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.is_public} onChange={e => setForm(f => ({ ...f, is_public: e.target.checked }))} className="rounded text-primary focus:ring-primary" />
+                <span className="text-sm font-bold text-slate-700">Make visible to all facilitators</span>
+             </label>
+
+             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button onClick={() => setShowForm(false)} className="px-6 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Cancel</button>
+                <button onClick={saveCourse} disabled={!form.name.trim()} className="px-8 py-2 font-bold text-white bg-primary rounded-lg shadow-md disabled:opacity-50">Create Course</button>
+             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {loading ? (
-        <p className="text-fsu-muted">Loading courses…</p>
+        <p className="text-slate-400">Loading courses…</p>
       ) : courses.length === 0 ? (
-        <div className="bg-fsu-soft border border-fsu-border rounded-xl p-10 text-center">
-          <p className="text-fsu-muted text-sm mb-2">No courses yet.</p>
-          <p className="text-fsu-faint text-xs">Create a course to organize sessions into a multi-day curriculum.</p>
+        <div className="bg-white dark:bg-background-dark border border-slate-200 dark:border-primary/20 rounded-xl p-12 text-center">
+          <p className="text-slate-500 mb-2 font-bold uppercase tracking-widest text-xs">No curriculum found</p>
+          <p className="text-slate-400 text-sm">Create a course to organize sessions into a multi-day curriculum.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {courses.map(course => {
-            const isOpen  = expanded === course.id;
-            const cData   = courseData[course.id] || [];
-            const isOwner = course.created_by === profile?.id;
-            return (
-              <div key={course.id} className="bg-fsu-surface border border-fsu-border rounded-xl overflow-hidden">
-                <button className="w-full text-left px-5 py-4 flex items-center gap-3"
-                  onClick={() => toggleExpand(course.id)}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-syne font-semibold text-fsu-text">{course.name}</h3>
-                      {course.is_public && (
-                        <span className="text-xs bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">Public</span>
-                      )}
-                    </div>
-                    {course.description && (
-                      <p className="text-xs text-fsu-muted mt-0.5 truncate">{course.description}</p>
-                    )}
-                    {course.goals?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {course.goals.map(g => <GoalTag key={g} goal={g} />)}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-fsu-faint text-sm flex-shrink-0">{isOpen ? '▲' : '▼'}</span>
-                </button>
+        <div className="bg-white dark:bg-background-dark border border-slate-200 dark:border-primary/20 rounded-xl overflow-hidden shadow-sm">
+           <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                 <thead>
+                    <tr className="bg-slate-50 dark:bg-primary/5 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest border-b border-slate-200 dark:border-primary/10">
+                       <th className="px-6 py-4">Course Name</th>
+                       <th className="px-6 py-4">Goals</th>
+                       <th className="px-6 py-4">Status</th>
+                       <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-100 dark:divide-primary/5">
+                    {courses.map(course => {
+                       const isOwner = course.created_by === profile?.id;
+                       return (
+                          <tr key={course.id} className="hover:bg-slate-50/50 dark:hover:bg-primary/5 transition-colors">
+                             <td className="px-6 py-5">
+                                <div className="flex flex-col">
+                                   <span className="text-sm font-bold text-slate-900 dark:text-slate-50">{course.name}</span>
+                                   <span className="text-xs text-slate-400 line-clamp-1">{course.description}</span>
+                                </div>
+                             </td>
+                             <td className="px-6 py-5">
+                                <div className="flex flex-wrap gap-1">
+                                   {course.goals?.slice(0, 2).map(g => (
+                                      <span key={g} className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                                         {g.replace(/-/g, ' ')}
+                                      </span>
+                                   ))}
+                                </div>
+                             </td>
+                             <td className="px-6 py-5">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${course.is_public ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                                   <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${course.is_public ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                   {course.is_public ? 'Public' : 'Private'}
+                                </span>
+                             </td>
+                             <td className="px-6 py-5 text-right">
+                                <div className="flex justify-end gap-2">
+                                   <button onClick={() => toggleExpand(course.id)} className="text-primary hover:text-primary/80 font-bold text-xs uppercase">View</button>
+                                   {isOwner && <button onClick={() => deleteCourse(course.id)} className="text-slate-400 hover:text-red-600 font-bold text-xs uppercase">Delete</button>}
+                                </div>
+                             </td>
+                          </tr>
+                       );
+                    })}
+                 </tbody>
+              </table>
+           </div>
+        </div>
+      )}
 
-                {isOpen && (
-                  <div className="border-t border-fsu-border px-5 py-4">
-                    <div className="space-y-2 mb-4">
-                      {cData.length === 0 && (
-                        <p className="text-xs text-fsu-muted">No sessions in this course yet.</p>
-                      )}
-                      {cData.map((cs, i) => (
-                        <div key={cs.id} className="flex items-center gap-3 bg-fsu-soft border border-fsu-border rounded-lg px-3 py-2.5">
-                          <span className="text-xs text-fsu-faint font-mono w-5">{i + 1}</span>
-                          <Link to={`/sessions/${cs.sessions?.id}`}
-                            className="flex-1 text-sm font-medium text-fsu-text hover:text-fsu-garnet transition-colors truncate">
-                            {cs.sessions?.name || 'Unknown Session'}
-                          </Link>
-                          <span className="text-xs px-1.5 py-0.5 rounded-full capitalize"
-                            style={{
-                              background: { draft:'#fef3c7', ready:'#dcfce7', completed:'#dbeafe' }[cs.sessions?.status] || '#f5f2ee',
-                              color:      { draft:'#d97706', ready:'#16a34a', completed:'#2563eb' }[cs.sessions?.status] || '#78716C',
-                            }}>
-                            {cs.sessions?.status}
-                          </span>
-                          {isOwner && (
-                            <button onClick={() => removeSessionFromCourse(course.id, cs.id)}
-                              className="text-fsu-faint hover:text-red-400 text-sm transition-colors">×</button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {isOwner && (
-                      <div className="flex gap-2 flex-wrap">
-                        {addingSession === course.id ? (
-                          <>
-                            <select defaultValue="" onChange={e => e.target.value && addSessionToCourse(course.id, e.target.value)}
-                              className="border border-fsu-garnet rounded-lg px-2.5 py-1.5 text-sm focus:outline-none text-fsu-text bg-fsu-surface">
-                              <option value="">Pick a session…</option>
-                              {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                            <button onClick={() => setAddingSession(null)}
-                              className="text-xs text-fsu-muted hover:text-fsu-text">Cancel</button>
-                          </>
-                        ) : (
-                          <button onClick={() => setAddingSession(course.id)}
-                            className="text-xs border border-fsu-border text-fsu-muted hover:border-fsu-garnet hover:text-fsu-garnet px-3 py-1.5 rounded-lg transition-colors">
-                            + Add Session
-                          </button>
-                        )}
-                        <button onClick={() => deleteCourse(course.id)}
-                          className="text-xs border border-red-200 text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
-                          Delete Course
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {expanded && (
+        <div className="mt-8 p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg">
+           <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-navy-deep dark:text-white">Course Sessions</h3>
+              <button onClick={() => setExpanded(null)} className="text-slate-400 hover:text-navy">
+                 <span className="material-symbols-outlined">close</span>
+              </button>
+           </div>
+           <div className="space-y-2">
+              {(courseData[expanded] || []).map((cs, i) => (
+                 <div key={cs.id} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                    <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
+                    <Link to={`/sessions/${cs.sessions?.id}`} className="flex-1 text-sm font-bold text-navy-deep dark:text-white hover:text-primary transition-colors">{cs.sessions?.name}</Link>
+                    <span className="text-[10px] font-black uppercase text-slate-400">{cs.sessions?.status}</span>
+                 </div>
+              ))}
+              {(!courseData[expanded] || courseData[expanded].length === 0) && <p className="text-sm text-slate-400 italic">No sessions added yet.</p>}
+           </div>
         </div>
       )}
     </div>
