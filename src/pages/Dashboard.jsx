@@ -1,47 +1,96 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
 import { Badge } from '../components/ui/Badge';
+import { Toast } from '../components/ui/Toast';
 import { stripEmojis } from '../lib/utils';
 
 const supabase = getSupabaseClient();
 
 export default function Dashboard() {
-  const { profile, isAdmin } = useProfile();
+  const { profile, isAdmin, canPlan } = useProfile();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ sessions: 0, games: 0, users: 0 });
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    async function load() {
-      const queries = [
-        supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('is_archived', false),
-        supabase.from('games').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('sessions').select('id,name,status,updated_at')
-          .eq('is_archived', false)
-          .order('updated_at', { ascending: false })
-          .limit(5),
-      ];
-      const results = await Promise.all(queries);
-      setStats({
-        sessions: results[0].count || 0,
-        games:    results[1].count || 0,
-      });
-      setRecent(results[2].data || []);
-      setLoading(false);
-    }
     load();
   }, []);
+
+  async function load() {
+    const queries = [
+      supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('is_archived', false),
+      supabase.from('games').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      supabase.from('sessions').select('id,name,status,updated_at')
+        .eq('is_archived', false)
+        .order('updated_at', { ascending: false })
+        .limit(5),
+    ];
+    const results = await Promise.all(queries);
+    setStats({
+      sessions: results[0].count || 0,
+      games:    results[1].count || 0,
+    });
+    setRecent(results[2].data || []);
+    setLoading(false);
+  }
+
+  async function quickCreateSession() {
+    const { data, error } = await supabase.from('sessions')
+      .insert({ name: 'New Session', owner_id: profile.id, status: 'draft' })
+      .select().single();
+    if (error) {
+      setToast({ type: 'error', message: 'Error creating session: ' + error.message });
+    } else {
+      navigate(`/sessions/${data.id}`);
+    }
+  }
+
+  async function quickCreateCourse() {
+    const { data, error } = await supabase.from('courses')
+      .insert({ name: 'New Program', created_by: profile.id, is_public: false })
+      .select().single();
+    if (error) {
+      setToast({ type: 'error', message: 'Error creating program: ' + error.message });
+    } else {
+      setToast({ type: 'success', message: 'New program created successfully!' });
+      load();
+      navigate(`/courses`);
+    }
+  }
 
   if (!profile || loading) return <div className="p-8 text-slate-400">Loading dashboard...</div>;
 
   return (
     <div className="flex-1 overflow-y-auto p-12 bg-background-light dark:bg-background-dark font-display">
-      {/* Page Title */}
-      <div className="mb-12 border-b border-slate-100 dark:border-slate-800 pb-8">
-        <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.name || profile.email}</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Tracking performance across the FSU Challenge Course program.</p>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {/* Page Title & Quick Actions */}
+      <div className="mb-12 border-b border-slate-100 dark:border-slate-800 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.name || profile.email}</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Tracking performance across the FSU Challenge Course program.</p>
+        </div>
+        {canPlan && (
+          <div className="flex gap-3">
+            <button
+              onClick={quickCreateSession}
+              className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+            >
+              <span className="material-symbols-outlined text-lg">add_circle</span>
+              New Session
+            </button>
+            <button
+              onClick={quickCreateCourse}
+              className="flex items-center gap-2 bg-white dark:bg-slate-800 border-2 border-primary/20 text-primary dark:text-slate-100 px-6 py-3 rounded-xl font-bold hover:bg-primary/5 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">account_tree</span>
+              New Program
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}

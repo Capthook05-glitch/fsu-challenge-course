@@ -43,6 +43,22 @@ export default function Courses() {
     setCourseData(prev => ({ ...prev, [courseId]: data || [] }));
   }
 
+  async function addSessionToCourse(courseId, sessionId) {
+    if (!sessionId) return;
+    const current = courseData[courseId] || [];
+    const { data } = await supabase.from('course_sessions').insert({
+      course_id: courseId,
+      session_id: sessionId,
+      position: current.length
+    }).select('id, position, notes, sessions(id, name, status)').single();
+    if (data) setCourseData(prev => ({ ...prev, [courseId]: [...current, data] }));
+  }
+
+  async function removeSessionFromCourse(id, courseId) {
+    await supabase.from('course_sessions').delete().eq('id', id);
+    setCourseData(prev => ({ ...prev, [courseId]: prev[courseId].filter(x => x.id !== id) }));
+  }
+
   function toggleExpand(id) {
     if (expanded === id) { setExpanded(null); return; }
     setExpanded(id);
@@ -198,22 +214,58 @@ export default function Courses() {
       )}
 
       {expanded && (
-        <div className="mt-8 p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg">
+        <div className="mt-8 p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg animate-in fade-in slide-in-from-bottom-4">
            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-navy-deep dark:text-white">Course Sessions</h3>
+              <div>
+                 <h3 className="text-xl font-bold text-navy-deep dark:text-white">Program Sequence</h3>
+                 <p className="text-xs text-slate-500 font-medium">Build your program by adding existing sessions in order.</p>
+              </div>
               <button onClick={() => setExpanded(null)} className="text-slate-400 hover:text-navy">
                  <span className="material-symbols-outlined">close</span>
               </button>
            </div>
-           <div className="space-y-2">
-              {(courseData[expanded] || []).map((cs, i) => (
-                 <div key={cs.id} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
-                    <Link to={`/sessions/${cs.sessions?.id}`} className="flex-1 text-sm font-bold text-navy-deep dark:text-white hover:text-primary transition-colors">{cs.sessions?.name}</Link>
-                    <span className="text-[10px] font-black uppercase text-slate-400">{cs.sessions?.status}</span>
+
+           <div className="space-y-4">
+              <div className="grid gap-2">
+                 {(courseData[expanded] || []).map((cs, i) => (
+                    <div key={cs.id} className="flex items-center gap-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 group">
+                       <div className="size-6 flex items-center justify-center rounded bg-primary/10 text-primary text-[10px] font-black">{i + 1}</div>
+                       <Link to={`/sessions/${cs.sessions?.id}`} className="flex-1 text-sm font-bold text-navy-deep dark:text-white hover:text-primary transition-colors">
+                          {stripEmojis(cs.sessions?.name)}
+                       </Link>
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{cs.sessions?.status}</span>
+                       <button
+                          onClick={() => removeSessionFromCourse(cs.id, expanded)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-600 transition-all"
+                       >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                       </button>
+                    </div>
+                 ))}
+                 {(!courseData[expanded] || courseData[expanded].length === 0) && (
+                    <div className="py-12 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
+                       <p className="text-sm text-slate-400 italic">No sessions added to this program yet.</p>
+                    </div>
+                 )}
+              </div>
+
+              {canPlan && (
+                 <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Add Session to Program</label>
+                    <div className="flex gap-3">
+                       <select
+                          className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                          onChange={(e) => addSessionToCourse(expanded, e.target.value)}
+                          defaultValue=""
+                       >
+                          <option value="" disabled>Select a session to add...</option>
+                          {sessions.map(s => (
+                             <option key={s.id} value={s.id}>{stripEmojis(s.name)}</option>
+                          ))}
+                       </select>
+                    </div>
                  </div>
-              ))}
-              {(!courseData[expanded] || courseData[expanded].length === 0) && <p className="text-sm text-slate-400 italic">No sessions added yet.</p>}
+              )}
            </div>
         </div>
       )}
