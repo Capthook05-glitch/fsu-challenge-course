@@ -22,7 +22,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AppShell() {
-  const { profile, isAdmin, canPlan } = useProfile();
+  const { profile, isAdmin } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -77,24 +77,22 @@ export default function AppShell() {
                   }`
                 }
               >
-                Admin
+                Manage Toolkit
               </NavLink>
             )}
           </nav>
 
           {/* Action Area */}
           <div className="flex items-center gap-4">
-            {canPlan && (
-              <div className="relative group">
-                <button
-                  onClick={() => navigate('/sessions')}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md shadow-primary/10"
-                >
-                  <span className="material-symbols-outlined text-[20px]">assignment</span>
-                  <span className="hidden sm:inline">Session Plan</span>
-                </button>
-              </div>
-            )}
+            <div className="relative group">
+              <button
+                onClick={() => navigate('/sessions')}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md shadow-primary/10"
+              >
+                <span className="material-symbols-outlined text-[20px]">assignment</span>
+                <span className="hidden sm:inline">Session Plan</span>
+              </button>
+            </div>
 
             <div className="relative">
               <button

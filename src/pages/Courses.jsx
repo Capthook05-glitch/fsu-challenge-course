@@ -4,6 +4,7 @@ import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
 import { GoalTag } from '../components/ui/GoalTag';
 import { Modal } from '../components/ui/Modal';
+import { GOAL_META, GOAL_KEYS } from '../lib/goalMeta';
 
 const supabase = getSupabaseClient();
 
@@ -40,6 +41,22 @@ export default function Courses() {
       .eq('course_id', courseId)
       .order('position');
     setCourseData(prev => ({ ...prev, [courseId]: data || [] }));
+  }
+
+  async function addSessionToCourse(courseId, sessionId) {
+    if (!sessionId) return;
+    const current = courseData[courseId] || [];
+    const { data } = await supabase.from('course_sessions').insert({
+      course_id: courseId,
+      session_id: sessionId,
+      position: current.length
+    }).select('id, position, notes, sessions(id, name, status)').single();
+    if (data) setCourseData(prev => ({ ...prev, [courseId]: [...current, data] }));
+  }
+
+  async function removeSessionFromCourse(id, courseId) {
+    await supabase.from('course_sessions').delete().eq('id', id);
+    setCourseData(prev => ({ ...prev, [courseId]: prev[courseId].filter(x => x.id !== id) }));
   }
 
   function toggleExpand(id) {
@@ -81,6 +98,10 @@ export default function Courses() {
           <p className="text-slate-500 dark:text-slate-400 max-w-2xl">Organize sessions into multi-day courses and tracked learning progressions.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/templates" className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-navy-600 rounded-lg text-sm font-bold hover:bg-slate-50 transition-all shadow-sm">
+             <span className="material-symbols-outlined text-lg">description</span>
+             Blueprints
+          </Link>
            {canPlan && (
              <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-md">
                 <span className="material-symbols-outlined text-lg">add_circle</span>
@@ -193,56 +214,58 @@ export default function Courses() {
       )}
 
       {expanded && (
-        <div className="mt-8 p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg">
+        <div className="mt-8 p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg animate-in fade-in slide-in-from-bottom-4">
            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-navy-deep dark:text-white">Course Sessions</h3>
-              <div className="flex items-center gap-3">
-                 {canPlan && (
-                   <button onClick={() => setAddingSession(addingSession === expanded ? null : expanded)}
-                     className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all">
-                     <span className="material-symbols-outlined text-sm">add</span>
-                     Add Session
-                   </button>
-                 )}
-                 <button onClick={() => setExpanded(null)} className="text-slate-400 hover:text-navy">
-                    <span className="material-symbols-outlined">close</span>
-                 </button>
+              <div>
+                 <h3 className="text-xl font-bold text-navy-deep dark:text-white">Program Sequence</h3>
+                 <p className="text-xs text-slate-500 font-medium">Build your program by adding existing sessions in order.</p>
               </div>
+              <button onClick={() => setExpanded(null)} className="text-slate-400 hover:text-navy">
+                 <span className="material-symbols-outlined">close</span>
+              </button>
            </div>
 
-           {addingSession === expanded && (
-             <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Select a session to add:</p>
-               <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                 {sessions
-                   .filter(s => !(courseData[expanded] || []).find(cs => cs.sessions?.id === s.id))
-                   .map(s => (
-                     <button key={s.id} onClick={() => addSessionToCourse(expanded, s.id)}
-                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-primary hover:text-primary transition-colors">
-                       {s.name}
-                     </button>
-                   ))}
-                 {sessions.filter(s => !(courseData[expanded] || []).find(cs => cs.sessions?.id === s.id)).length === 0 && (
-                   <p className="text-xs text-slate-400 italic">All available sessions are already in this course.</p>
+           <div className="space-y-4">
+              <div className="grid gap-2">
+                 {(courseData[expanded] || []).map((cs, i) => (
+                    <div key={cs.id} className="flex items-center gap-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 group">
+                       <div className="size-6 flex items-center justify-center rounded bg-primary/10 text-primary text-[10px] font-black">{i + 1}</div>
+                       <Link to={`/sessions/${cs.sessions?.id}`} className="flex-1 text-sm font-bold text-navy-deep dark:text-white hover:text-primary transition-colors">
+                          {stripEmojis(cs.sessions?.name)}
+                       </Link>
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{cs.sessions?.status}</span>
+                       <button
+                          onClick={() => removeSessionFromCourse(cs.id, expanded)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-600 transition-all"
+                       >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                       </button>
+                    </div>
+                 ))}
+                 {(!courseData[expanded] || courseData[expanded].length === 0) && (
+                    <div className="py-12 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
+                       <p className="text-sm text-slate-400 italic">No sessions added to this program yet.</p>
+                    </div>
                  )}
-               </div>
-             </div>
-           )}
+              </div>
 
-           <div className="space-y-2">
-              {(courseData[expanded] || []).map((cs, i) => (
-                 <div key={cs.id} className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
-                    <Link to={`/sessions/${cs.sessions?.id}`} className="flex-1 text-sm font-bold text-navy-deep dark:text-white hover:text-primary transition-colors">{cs.sessions?.name}</Link>
-                    <span className="text-[10px] font-black uppercase text-slate-400">{cs.sessions?.status}</span>
-                    {canPlan && (
-                      <button onClick={() => removeSessionFromCourse(expanded, cs.id)} className="text-slate-300 hover:text-red-500 transition-colors ml-2">
-                        <span className="material-symbols-outlined text-sm">remove_circle</span>
-                      </button>
-                    )}
+              {canPlan && (
+                 <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Add Session to Program</label>
+                    <div className="flex gap-3">
+                       <select
+                          className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                          onChange={(e) => addSessionToCourse(expanded, e.target.value)}
+                          defaultValue=""
+                       >
+                          <option value="" disabled>Select a session to add...</option>
+                          {sessions.map(s => (
+                             <option key={s.id} value={s.id}>{stripEmojis(s.name)}</option>
+                          ))}
+                       </select>
+                    </div>
                  </div>
-              ))}
-              {(!courseData[expanded] || courseData[expanded].length === 0) && <p className="text-sm text-slate-400 italic">No sessions added yet.</p>}
+              )}
            </div>
         </div>
       )}

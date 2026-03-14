@@ -1,13 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseClient } from '../lib/supabase';
+import { useProfile } from '../context/ProfileContext';
 import { GameCard } from '../components/games/GameCard';
+import { Modal } from '../components/ui/Modal';
+import { Toast } from '../components/ui/Toast';
 import { GOAL_META, GOAL_KEYS } from '../lib/goalMeta';
 import { stripEmojis } from '../lib/utils';
 
 const supabase = getSupabaseClient();
 
 export default function GameCatalog() {
+  const { profile, canPlan } = useProfile();
   const [games, setGames] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
   const [filterGoal, setFilterGoal]       = useState([]);
@@ -16,10 +21,21 @@ export default function GameCatalog() {
   const [groupSize, setGroupSize] = useState(10);
   const [viewType, setViewType] = useState('grid'); // 'grid' or 'list'
 
+  const [addingGame, setAddingGame] = useState(null);
+  const [toast, setToast] = useState(null);
+
   useEffect(() => {
-    supabase.from('games').select('*').eq('is_active', true).order('name')
-      .then(({ data }) => { setGames(data || []); setLoading(false); });
-  }, []);
+    async function load() {
+      const [gameRes, sessRes] = await Promise.all([
+        supabase.from('games').select('*').eq('is_active', true).order('name'),
+        canPlan ? supabase.from('sessions').select('id, name').eq('is_archived', false).order('updated_at', { ascending: false }) : Promise.resolve({ data: [] })
+      ]);
+      setGames(gameRes.data || []);
+      setSessions(sessRes.data || []);
+      setLoading(false);
+    }
+    load();
+  }, [canPlan]);
 
   const filtered = useMemo(() => {
     return games.filter(g => {
@@ -42,8 +58,40 @@ export default function GameCatalog() {
     setFilterMaxTime(45); setGroupSize(10);
   }
 
+  async function addGameToSession(sessionId) {
+    if (!addingGame || !sessionId) return;
+
+    // Get current blocks to determine position
+    const { data: blocks } = await supabase.from('timeline_blocks')
+      .select('position')
+      .eq('session_id', sessionId)
+      .order('position', { ascending: false })
+      .limit(1);
+
+    const nextPos = (blocks?.[0]?.position ?? -1) + 1;
+    const startTime = (blocks?.[0]?.start_time ?? 0) + (blocks?.[0]?.duration_min ?? 0);
+
+    const { error } = await supabase.from('timeline_blocks').insert({
+      session_id: sessionId,
+      game_id: addingGame.id,
+      block_type: 'activity',
+      title: addingGame.name,
+      duration_min: addingGame.time_min || 20,
+      position: nextPos,
+      start_time: startTime
+    });
+
+    if (error) {
+      setToast({ type: 'error', message: 'Failed to add game: ' + error.message });
+    } else {
+      setToast({ type: 'success', message: `Added "${stripEmojis(addingGame.name)}" to your plan.` });
+      setAddingGame(null);
+    }
+  }
+
   return (
     <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row gap-8 p-6 lg:p-12 bg-background-light">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {/* Sidebar Filters */}
       <aside className="w-full lg:w-72 shrink-0 space-y-8 no-print">
         <div className="flex items-center justify-between">
@@ -167,13 +215,12 @@ export default function GameCatalog() {
         {loading && <p className="text-slate-400">Loading activities...</p>}
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* We can highlight the first filtered game as an "Expanded Card" if in grid view and it's highly relevant */}
           {filtered.map((g, i) => (
             <GameCard
               key={g.id}
               game={{...g, name: stripEmojis(g.name)}}
               isExpanded={viewType === 'grid' && i === 0 && search === '' && filterGoal.length === 0}
-              onAdd={() => console.log('Add to plan', g)}
+              onAdd={() => canPlan ? setAddingGame(g) : setToast({ type: 'error', message: 'You do not have permission to plan sessions.' })}
             />
           ))}
 
@@ -186,6 +233,51 @@ export default function GameCatalog() {
           )}
         </div>
       </section>
+
+      {addingGame && (
+        <Modal onClose={() => setAddingGame(null)} title="Add to Session Plan">
+          <div className="space-y-6">
+            <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
+              <p className="text-xs font-black text-primary uppercase tracking-widest mb-1">Selected Game</p>
+              <p className="text-lg font-extrabold text-navy-deep">{stripEmojis(addingGame.name)}</p>
+            </div>
+
+            {sessions.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-500 mb-4 font-medium">You don't have any active session plans.</p>
+                <button
+                  onClick={() => window.location.href = '/sessions'}
+                  className="bg-primary text-white px-6 py-2 rounded-lg font-bold"
+                >
+                  Go to Session Planner
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Choose a Session</p>
+                <div className="grid gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {sessions.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => addGameToSession(s.id)}
+                      className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group"
+                    >
+                      <p className="font-bold text-navy-deep group-hover:text-primary">{stripEmojis(s.name)}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setAddingGame(null)}
+              className="w-full py-3 text-slate-500 font-bold hover:text-navy-deep transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

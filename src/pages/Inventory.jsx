@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
 import { Modal } from '../components/ui/Modal';
@@ -58,6 +59,10 @@ export default function Inventory() {
           <p className="text-slate-500 dark:text-slate-400 max-w-2xl">Centralized inventory tracking and safety compliance for high-ropes gear.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/incidents" className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-navy-600 rounded-lg text-sm font-bold hover:bg-slate-50 transition-all shadow-sm">
+             <span className="material-symbols-outlined text-lg">report_problem</span>
+             Safety Log
+          </Link>
           {canPlan && (
              <button onClick={() => { setEditing('new'); setForm(BLANK_EQUIPMENT); }} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-md">
                 <span className="material-symbols-outlined text-lg">add_circle</span>
