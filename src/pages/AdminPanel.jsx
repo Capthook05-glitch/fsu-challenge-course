@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
 import { GoalTag } from '../components/ui/GoalTag';
 import { GOAL_KEYS, GOAL_META } from '../lib/goalMeta';
+import { stripEmojis } from '../lib/utils';
 
 const supabase = getSupabaseClient();
 
@@ -44,24 +45,31 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden font-display">
-      {/* Sidebar - Simplified for Admin Panel context */}
-      <aside className="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col no-print">
-        <div className="p-6 flex items-center gap-3">
-          <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-accent-gold">
+    <div className="flex h-screen overflow-hidden font-display">
+      {/* Sidebar */}
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col no-print">
+        <div className="p-8 flex items-center gap-3">
+          <div className="h-10 w-10 bg-primary rounded flex items-center justify-center text-white">
             <span className="material-symbols-outlined text-2xl">account_tree</span>
           </div>
           <div>
-            <h1 className="text-lg font-extrabold tracking-tight leading-none text-slate-900 dark:text-slate-100">FSU Toolkit</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Facilitator Admin</p>
+            <h1 className="text-lg font-bold tracking-tight leading-none text-navy-deep uppercase">FSU Toolkit</h1>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Facilitator Admin</p>
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-primary bg-primary/10 font-bold border-l-4 border-primary">
-              <span className="material-symbols-outlined">sports_esports</span>
-              <span>Game Management</span>
+        <nav className="flex-1 px-4 space-y-1 mt-4">
+           <button className="w-full flex items-center gap-3 px-4 py-3 rounded text-primary bg-primary/5 font-bold border-l-4 border-primary">
+              <span className="material-symbols-outlined text-xl">sports_esports</span>
+              <span className="text-sm">Game Management</span>
            </button>
-           {/* Add more admin links here if needed */}
+           <button className="w-full flex items-center gap-3 px-4 py-3 rounded text-slate-600 hover:bg-slate-50 hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-xl">group</span>
+              <span className="text-sm font-semibold">Users</span>
+           </button>
+           <button className="w-full flex items-center gap-3 px-4 py-3 rounded text-slate-600 hover:bg-slate-50 hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-xl">history_edu</span>
+              <span className="text-sm font-semibold">Sessions</span>
+           </button>
         </nav>
       </aside>
 
@@ -82,7 +90,7 @@ export default function AdminPanel() {
                {games.map(g => (
                   <div key={g.id} className="bg-white dark:bg-slate-900/40 p-6 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col">
                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">{g.name}</h3>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">{stripEmojis(g.name)}</h3>
                         <span className={`w-2 h-2 rounded-full ${g.is_active ? 'bg-emerald-500' : 'bg-slate-500'}`}></span>
                      </div>
                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">{g.description}</p>

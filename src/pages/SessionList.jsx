@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
 import { STATUS_STYLE } from '../lib/statusStyles';
+import { stripEmojis } from '../lib/utils';
 
 const supabase = getSupabaseClient();
 
@@ -57,7 +58,7 @@ export default function SessionList() {
       <Link to={`/sessions/${s.id}`}
         className="flex items-center justify-between p-4 bg-fsu-surface border border-fsu-border rounded-xl hover:border-fsu-garnet hover:shadow-sm transition-all">
         <div>
-          <p className="font-medium text-fsu-text text-sm mb-0.5">{s.name}</p>
+          <p className="font-medium text-fsu-text text-sm mb-0.5">{stripEmojis(s.name)}</p>
           <p className="text-xs text-fsu-muted">{new Date(s.updated_at).toLocaleDateString()}</p>
         </div>
         <div className="flex items-center gap-2">

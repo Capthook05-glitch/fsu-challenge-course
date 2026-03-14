@@ -4,6 +4,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
+import { stripEmojis } from '../lib/utils';
 import { TimelineBlock } from '../components/timeline/TimelineBlock';
 import { BlockEditor } from '../components/timeline/BlockEditor';
 import { GoalTag } from '../components/ui/GoalTag';
@@ -101,35 +102,39 @@ export default function TimelinePlanner() {
   if (loading) return <div className="p-10 text-slate-400">Loading planner...</div>;
 
   return (
-    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 md:px-10 py-8">
+    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 md:px-10 py-10">
       {/* Summary Bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="flex flex-col gap-1 rounded-xl p-5 border border-primary/20 bg-primary/5">
-          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Blocks</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="flex flex-col gap-1 rounded-lg p-5 border border-slate-200 bg-white shadow-sm">
+          <p className="text-navy-600 text-xs font-bold uppercase tracking-widest">Total Activities</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-white text-2xl font-bold">{blocks.length}</p>
+            <p className="text-navy-900 text-2xl font-extrabold">{blocks.length} Items</p>
           </div>
         </div>
-        <div className="flex flex-col gap-1 rounded-xl p-5 border border-primary/20 bg-primary/5">
-          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Est. Duration</p>
+        <div className="flex flex-col gap-1 rounded-lg p-5 border border-slate-200 bg-white shadow-sm">
+          <p className="text-navy-600 text-xs font-bold uppercase tracking-widest">Est. Duration</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-white text-2xl font-bold">{summary.totalMin} min</p>
-            <span className="text-slate-500 text-xs">Buffer inc.</span>
+            <p className="text-navy-900 text-2xl font-extrabold">{summary.totalMin} min</p>
+            <span className="text-slate-400 text-xs">Buffer inc.</span>
           </div>
         </div>
-        <div className="flex flex-col gap-1 rounded-xl p-5 border border-primary/20 bg-primary/5">
-          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Focus Goals</p>
-          <div className="flex items-center gap-2">
-             {summary.allGoals.slice(0,3).map(g => <GoalTag key={g} goal={g} size="sm" />)}
-             {summary.allGoals.length === 0 && <span className="text-slate-600">None set</span>}
+        <div className="flex flex-col gap-1 rounded-lg p-5 border border-slate-200 bg-white shadow-sm">
+          <p className="text-navy-600 text-xs font-bold uppercase tracking-widest">Focus Goals</p>
+          <div className="flex items-center gap-3">
+             {summary.allGoals.slice(0,3).map(g => (
+               <span key={g} className="text-navy-900 font-bold flex items-center gap-1">
+                 <span className="material-symbols-outlined text-lg text-primary">target</span>
+               </span>
+             ))}
+             {summary.allGoals.length === 0 && <span className="text-slate-400 text-xs italic">No focus set</span>}
           </div>
         </div>
-        <div className="flex flex-col gap-1 rounded-xl p-5 border border-primary/20 bg-primary/5">
-          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Status</p>
+        <div className="flex flex-col gap-1 rounded-lg p-5 border border-slate-200 bg-white shadow-sm">
+          <p className="text-navy-600 text-xs font-bold uppercase tracking-widest">Session Arc</p>
           <div className="flex items-center gap-2">
-            <span className={`flex h-2 w-2 rounded-full ${session.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-            <p className={`text-lg font-bold capitalize ${session.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'}`}>
-               {session.status}
+            <span className={`flex h-2.5 w-2.5 rounded-full ${session.status === 'ready' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+            <p className={`text-lg font-extrabold capitalize ${session.status === 'ready' ? 'text-emerald-700' : 'text-amber-700'}`}>
+               {session.status === 'ready' ? 'Healthy' : session.status}
             </p>
           </div>
         </div>
@@ -137,8 +142,8 @@ export default function TimelinePlanner() {
 
       {/* Sequence Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-white text-xl font-bold flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary">reorder</span>
+        <h2 className="text-navy-900 text-xl font-extrabold flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary font-bold">reorder</span>
           Planned Sequence
         </h2>
         {canEdit && (
@@ -164,9 +169,9 @@ export default function TimelinePlanner() {
               {blocks.map((block, i) => (
                 <TimelineBlock
                   key={block.id}
-                  block={block}
+                  block={{...block, title: stripEmojis(block.title)}}
                   index={i}
-                  game={games[block.game_id]}
+                  game={games[block.game_id] ? {...games[block.game_id], name: stripEmojis(games[block.game_id].name)} : null}
                   onEdit={setEditBlock}
                   readOnly={!canEdit}
                 />
@@ -177,23 +182,19 @@ export default function TimelinePlanner() {
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-slate-800 pt-8 pb-12">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-slate-200 pt-8 pb-16">
         <div className="flex gap-4 order-2 sm:order-1">
-          <button onClick={() => window.print()} className="flex items-center gap-2 text-accent-gold hover:text-accent-gold/80 font-semibold text-sm transition-colors border border-accent-gold/30 px-4 py-2 rounded-lg">
+          <button onClick={() => window.print()} className="flex items-center gap-2 text-primary hover:bg-primary hover:text-white font-bold text-sm transition-all border border-primary px-5 py-2.5 rounded">
             <span className="material-symbols-outlined text-lg">download</span>
             Export PDF
           </button>
-          {/* <button className="flex items-center gap-2 text-slate-400 hover:text-white font-semibold text-sm transition-colors border border-slate-700 px-4 py-2 rounded-lg">
-            <span className="material-symbols-outlined text-lg">share</span>
-            Share
-          </button> */}
         </div>
         <button
           onClick={() => navigate(`/sessions/${id}/facilitate`)}
-          className="w-full sm:w-auto flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-white font-bold px-8 py-4 rounded-xl shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 order-1 sm:order-2"
+          className="w-full sm:w-auto flex items-center justify-center gap-3 bg-primary hover:bg-[#5f2432] text-white font-extrabold px-10 py-4 rounded shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 order-1 sm:order-2 tracking-wide uppercase text-sm"
         >
           <span className="material-symbols-outlined">play_circle</span>
-          START FACILITATION MODE
+          Start Facilitation Mode
         </button>
       </div>
 

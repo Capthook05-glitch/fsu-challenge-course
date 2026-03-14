@@ -16,7 +16,7 @@ export function GoalTag({ goal, size = 'sm' }) {
       className={`px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider border transition-all`}
       style={{ background: meta.bg, color: meta.color, borderColor: `${meta.color}33` }}
     >
-      {meta.emoji} {meta.label}
+      {meta.label}
     </span>
   );
 }

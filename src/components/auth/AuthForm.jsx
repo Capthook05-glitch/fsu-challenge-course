@@ -30,22 +30,22 @@ export function AuthForm() {
   };
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-primary/20 bg-slate-900/50 p-8 shadow-2xl backdrop-blur-md">
+    <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-2xl backdrop-blur-md">
       <div className="flex items-center gap-3 mb-6">
-         <span className="text-3xl">🌲</span>
+         <span className="material-symbols-outlined text-primary text-3xl">forest</span>
          <div>
-            <h1 className="text-xl font-extrabold text-slate-100 uppercase leading-none">FSU Challenge</h1>
-            <p className="text-xs font-semibold text-accent-gold tracking-widest uppercase mt-0.5">Facilitator Toolkit</p>
+            <h1 className="text-xl font-extrabold text-navy-deep uppercase leading-none">FSU Challenge</h1>
+            <p className="text-[10px] font-bold text-accent-gold tracking-widest uppercase mt-0.5">Facilitator Toolkit</p>
          </div>
       </div>
 
-      <p className="text-sm text-slate-400 mb-8">Sign in to access your game library and session planner.</p>
+      <p className="text-sm text-slate-500 mb-8 font-medium">Sign in to access your game library and session planner.</p>
 
       <form className="space-y-6" onSubmit={onSubmit}>
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Email Address</label>
           <input
-            className="w-full rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-navy-deep focus:ring-2 focus:ring-primary transition-all outline-none"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -57,7 +57,7 @@ export function AuthForm() {
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Password</label>
           <input
-            className="w-full rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-navy-deep focus:ring-2 focus:ring-primary transition-all outline-none"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -75,7 +75,7 @@ export function AuthForm() {
         </button>
       </form>
 
-      <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col items-center gap-4">
+      <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center gap-4">
         <button
           type="button"
           className="text-sm font-bold text-accent-gold hover:underline"

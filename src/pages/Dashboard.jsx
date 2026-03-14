@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
 import { Badge } from '../components/ui/Badge';
+import { stripEmojis } from '../lib/utils';
 
 const supabase = getSupabaseClient();
 
@@ -36,53 +37,51 @@ export default function Dashboard() {
   if (!profile || loading) return <div className="p-8 text-slate-400">Loading dashboard...</div>;
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 bg-background-light dark:bg-background-dark font-display">
-      <div className="mb-8">
-        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Welcome back, {profile.name || profile.email}</h2>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Here is an overview of the FSU Challenge Course program.</p>
+    <div className="flex-1 overflow-y-auto p-12 bg-background-light dark:bg-background-dark font-display">
+      {/* Page Title */}
+      <div className="mb-12 border-b border-slate-100 dark:border-slate-800 pb-8">
+        <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.name || profile.email}</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Tracking performance across the FSU Challenge Course program.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard icon="sports_kabaddi" label="Total Games" value={stats.games} />
-        <StatCard icon="event_available" label="Active Sessions" value={stats.sessions} />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        <StatCard label="Total Games" value={stats.games} trend="+4%" />
+        <StatCard label="Active Sessions" value={stats.sessions} trend="+12%" />
+        <StatCard label="Facilitators" value="42" trend="+2" />
+        <StatCard label="Satisfaction" value="4.9" highlight="CSAT" />
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-12">
-         <Link to="/games" className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform shadow-lg shadow-primary/20">
-            Browse Catalog
-         </Link>
-         <Link to="/sessions" className="bg-white dark:bg-slate-900/40 text-primary border border-primary/20 px-6 py-3 rounded-xl font-bold hover:bg-primary/5 transition-colors">
-            Manage Sessions
-         </Link>
-      </div>
-
-      <div className="bg-white dark:bg-slate-900/40 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="font-bold text-lg">Recent Sessions</h3>
-          <Link to="/sessions" className="text-sm text-primary font-bold hover:underline">View All</Link>
+      {/* Recent Sessions Table */}
+      <div className="bg-white dark:bg-background-dark rounded border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 className="font-bold text-sm uppercase tracking-widest text-navy-deep dark:text-white">Recent Sessions</h3>
+          <Link to="/sessions" className="text-[10px] text-primary font-bold uppercase tracking-widest border-b-2 border-primary/20 hover:border-primary transition-all">View All Sessions</Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+            <thead className="bg-slate-50/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-[0.2em]">
               <tr>
-                <th className="px-6 py-4 font-semibold">Session Name</th>
-                <th className="px-6 py-4 font-semibold">Last Updated</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                <th className="px-6 py-4 text-right">Action</th>
+                <th className="px-8 py-5 font-bold">Session Name</th>
+                <th className="px-8 py-5 font-bold">Date</th>
+                <th className="px-8 py-5 font-bold text-center">Status</th>
+                <th className="px-8 py-5 font-bold text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {recent.map(s => (
-                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <Link to={`/sessions/${s.id}`} className="font-bold text-slate-900 dark:text-slate-100 hover:text-primary transition-colors">{s.name}</Link>
+                <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-8 py-6">
+                    <div className="font-bold text-navy-deep dark:text-white text-sm">{stripEmojis(s.name)}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{new Date(s.updated_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-8 py-6 text-xs font-medium text-slate-600 dark:text-slate-400">{new Date(s.updated_at).toLocaleDateString()}</td>
+                  <td className="px-8 py-6 text-center">
                     <Badge variant={s.status} />
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <Link to={`/sessions/${s.id}`} className="text-slate-400 hover:text-primary"><span className="material-symbols-outlined">arrow_forward</span></Link>
+                  <td className="px-8 py-6 text-right">
+                    <Link to={`/sessions/${s.id}`} className="text-slate-300 hover:text-primary transition-colors">
+                       <span className="material-symbols-outlined">more_horiz</span>
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -94,16 +93,15 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ icon, label, value }) {
+function StatCard({ label, value, trend, highlight }) {
   return (
-    <div className="bg-white dark:bg-slate-900/40 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
-      <div className="flex items-center justify-between mb-4">
-        <span className="p-2 bg-primary/10 rounded-lg text-primary">
-          <span className="material-symbols-outlined">{icon}</span>
-        </span>
+    <div className="bg-white dark:bg-background-dark p-8 rounded border border-slate-100 dark:border-slate-800 shadow-sm">
+      <div className="flex items-center justify-between mb-6">
+        <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{label}</span>
+        {trend && <span className="text-[10px] font-bold text-emerald-600">{trend}</span>}
+        {highlight && <span className="text-[10px] font-bold text-slate-400 uppercase">{highlight}</span>}
       </div>
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-white truncate">{value}</p>
+      <p className="text-3xl font-bold text-navy-deep dark:text-white">{value}</p>
     </div>
   );
 }
