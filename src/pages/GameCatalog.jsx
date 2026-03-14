@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseClient } from '../lib/supabase';
 import { GameCard } from '../components/games/GameCard';
-import { GoalTag } from '../components/ui/GoalTag';
 import { GOAL_META, GOAL_KEYS } from '../lib/goalMeta';
-import { Modal } from '../components/ui/Modal';
 
 const supabase = getSupabaseClient();
 
@@ -12,13 +10,10 @@ export default function GameCatalog() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
   const [filterGoal, setFilterGoal]       = useState([]);
-  const [filterSetting, setFilterSetting] = useState([]);
-  const [filterLevel, setFilterLevel]     = useState([]);
-  const [filterGroupSize, setFilterGroupSize] = useState('');
-  const [filterMaxTime, setFilterMaxTime]     = useState('');
-  const [filterPhysical, setFilterPhysical]   = useState('');
-  const [filterPsych, setFilterPsych]         = useState('');
-  const [detailGame, setDetailGame] = useState(null);
+  const [filterSetting, setFilterSetting] = useState(['outdoor']);
+  const [filterMaxTime, setFilterMaxTime]     = useState(45);
+  const [groupSize, setGroupSize] = useState(10);
+  const [viewType, setViewType] = useState('grid'); // 'grid' or 'list'
 
   useEffect(() => {
     supabase.from('games').select('*').eq('is_active', true).order('name')
@@ -31,52 +26,51 @@ export default function GameCatalog() {
           !g.description?.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterGoal.length && !filterGoal.some(f => g.goals?.includes(f))) return false;
       if (filterSetting.length && !filterSetting.some(s => g.setting?.includes(s))) return false;
-      if (filterLevel.length && !filterLevel.includes(g.activity_level)) return false;
-      if (filterGroupSize && g.max_group < parseInt(filterGroupSize)) return false;
-      if (filterMaxTime && g.time_min > parseInt(filterMaxTime)) return false;
-      if (filterPhysical && g.physical_intensity < parseInt(filterPhysical)) return false;
-      if (filterPsych && g.psychological_intensity < parseInt(filterPsych)) return false;
+      if (groupSize && (g.max_group < groupSize || g.min_group > groupSize)) return false;
+      if (filterMaxTime && g.time_min > filterMaxTime) return false;
       return true;
     });
-  }, [games, search, filterGoal, filterSetting, filterLevel, filterGroupSize, filterMaxTime, filterPhysical, filterPsych]);
+  }, [games, search, filterGoal, filterSetting, groupSize, filterMaxTime]);
 
   function toggleArr(arr, setArr, val) {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
   }
 
   function clearAll() {
-    setSearch(''); setFilterGoal([]); setFilterSetting([]); setFilterLevel([]);
-    setFilterGroupSize(''); setFilterMaxTime(''); setFilterPhysical(''); setFilterPsych('');
+    setSearch(''); setFilterGoal([]); setFilterSetting(['outdoor']);
+    setFilterMaxTime(45); setGroupSize(10);
   }
 
-  const hasFilters = search || filterGoal.length || filterSetting.length || filterLevel.length ||
-    filterGroupSize || filterMaxTime || filterPhysical || filterPsych;
-
   return (
-    <div className="flex h-full min-h-screen">
-      {/* Filter sidebar */}
-      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-fsu-soft border-r border-fsu-border overflow-y-auto py-4 px-3 gap-5">
+    <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row gap-8 p-6 lg:p-12">
+      {/* Sidebar Filters */}
+      <aside className="w-full lg:w-72 shrink-0 space-y-8 no-print">
         <div className="flex items-center justify-between">
-          <h2 className="font-syne font-bold text-fsu-text text-sm">Filters</h2>
-          {hasFilters && (
-            <button onClick={clearAll} className="text-xs text-fsu-garnet hover:underline">Clear all</button>
-          )}
+          <h2 className="text-xl font-bold tracking-tight text-slate-100">Filters</h2>
+          <button
+            onClick={clearAll}
+            className="text-xs font-bold text-primary hover:text-primary/80 uppercase tracking-wider"
+          >
+            Reset All
+          </button>
         </div>
 
         {/* Search */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Search</p>
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
           <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Activity name..."
-            className="w-full text-sm border border-fsu-border bg-fsu-surface rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-fsu-garnet text-fsu-text placeholder:text-fsu-faint"
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search activities..."
+            className="w-full bg-slate-900/50 border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-primary focus:border-primary text-slate-100"
           />
         </div>
 
-        {/* Goal */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Focus / Goal</p>
-          <div className="flex flex-col gap-1">
+        {/* Goal/Focus Tags */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">Goal / Focus</h3>
+          <div className="flex flex-wrap gap-2">
             {GOAL_KEYS.map(k => {
               const meta = GOAL_META[k];
               const active = filterGoal.includes(k);
@@ -84,11 +78,13 @@ export default function GameCatalog() {
                 <button
                   key={k}
                   onClick={() => toggleArr(filterGoal, setFilterGoal, k)}
-                  className="text-left text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors"
-                  style={active ? { background: meta.bg, color: meta.color, borderColor: meta.color+'55' }
-                    : { background: 'transparent', color: '#78716C', borderColor: '#E8E2D9' }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                    active
+                      ? 'bg-primary/20 text-primary border-primary/30'
+                      : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:bg-slate-800'
+                  }`}
                 >
-                  {meta.label}
+                  <span>{meta.emoji}</span> {meta.label}
                 </button>
               );
             })}
@@ -96,162 +92,99 @@ export default function GameCatalog() {
         </div>
 
         {/* Setting */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Setting</p>
-          <div className="flex flex-col gap-1">
-            {['indoor','outdoor'].map(s => (
-              <button key={s}
-                onClick={() => toggleArr(filterSetting, setFilterSetting, s)}
-                className={`text-left text-xs font-medium px-2.5 py-1.5 rounded-lg border capitalize transition-colors ${
-                  filterSetting.includes(s)
-                    ? 'bg-fsu-garnet text-white border-fsu-garnet'
-                    : 'bg-transparent text-fsu-muted border-fsu-border hover:border-fsu-border2'
-                }`}
-              >{s}</button>
+        <div className="space-y-4">
+          <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">Setting</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {['indoor', 'outdoor'].map(s => (
+              <label key={s} className="flex items-center gap-2 p-3 rounded-lg bg-slate-900/50 border border-slate-800 cursor-pointer hover:border-primary/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={filterSetting.includes(s)}
+                  onChange={() => toggleArr(filterSetting, setFilterSetting, s)}
+                  className="rounded text-primary focus:ring-primary bg-slate-800 border-slate-700"
+                />
+                <span className="text-xs font-medium capitalize">{s}</span>
+              </label>
             ))}
           </div>
         </div>
 
-        {/* Activity level */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Activity Level</p>
-          <div className="flex flex-col gap-1">
-            {['low','medium','high'].map(l => (
-              <button key={l}
-                onClick={() => toggleArr(filterLevel, setFilterLevel, l)}
-                className={`text-left text-xs font-medium px-2.5 py-1.5 rounded-lg border capitalize transition-colors ${
-                  filterLevel.includes(l)
-                    ? 'bg-fsu-garnet text-white border-fsu-garnet'
-                    : 'bg-transparent text-fsu-muted border-fsu-border hover:border-fsu-border2'
-                }`}
-              >{l}</button>
-            ))}
+        {/* Group Size */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">Group Size</h3>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={groupSize}
+              onChange={e => setGroupSize(parseInt(e.target.value) || 0)}
+              className="w-20 bg-slate-900/50 border-slate-800 rounded-lg py-2 text-center font-bold text-sm focus:ring-primary focus:border-primary text-slate-100"
+            />
+            <span className="text-slate-500 text-sm font-medium">Participants</span>
           </div>
         </div>
 
-        {/* Physical intensity */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Min Physical Intensity</p>
-          <div className="flex gap-1">
-            {[1,2,3,4,5].map(n => (
-              <button key={n}
-                onClick={() => setFilterPhysical(filterPhysical == n ? '' : String(n))}
-                className={`w-7 h-7 text-xs rounded border font-semibold transition-colors ${
-                  filterPhysical == n ? 'bg-orange-500 text-white border-orange-500' : 'bg-fsu-surface border-fsu-border text-fsu-muted'
-                }`}
-              >{n}</button>
-            ))}
+        {/* Time Range */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">Max Time</h3>
+            <span className="text-xs font-bold text-accent-gold">{filterMaxTime} mins</span>
           </div>
-        </div>
-
-        {/* Psych intensity */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Min Psych Intensity</p>
-          <div className="flex gap-1">
-            {[1,2,3,4,5].map(n => (
-              <button key={n}
-                onClick={() => setFilterPsych(filterPsych == n ? '' : String(n))}
-                className={`w-7 h-7 text-xs rounded border font-semibold transition-colors ${
-                  filterPsych == n ? 'bg-purple-500 text-white border-purple-500' : 'bg-fsu-surface border-fsu-border text-fsu-muted'
-                }`}
-              >{n}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Group size */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Min Group Size</p>
           <input
-            type="number" min="1" value={filterGroupSize}
-            onChange={e => setFilterGroupSize(e.target.value)}
-            placeholder="e.g. 15"
-            className="w-full text-sm border border-fsu-border bg-fsu-surface rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-fsu-garnet text-fsu-text"
-          />
-        </div>
-
-        {/* Max time */}
-        <div>
-          <p className="text-xs font-semibold text-fsu-muted uppercase tracking-wide mb-1.5">Max Time (min)</p>
-          <input
-            type="number" min="1" value={filterMaxTime}
-            onChange={e => setFilterMaxTime(e.target.value)}
-            placeholder="e.g. 20"
-            className="w-full text-sm border border-fsu-border bg-fsu-surface rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-fsu-garnet text-fsu-text"
+            type="range"
+            min="5"
+            max="120"
+            value={filterMaxTime}
+            onChange={e => setFilterMaxTime(parseInt(e.target.value))}
+            className="w-full accent-primary bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer"
           />
         </div>
       </aside>
 
-      {/* Game grid */}
-      <div className="flex-1 overflow-y-auto p-5">
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="font-syne font-bold text-2xl text-fsu-text">Activity Library</h1>
-          <span className="text-sm text-fsu-muted">{filtered.length} of {games.length} activities</span>
+      {/* Main Content */}
+      <section className="flex-1 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-100">Game Catalog</h2>
+            <p className="text-slate-400 mt-1">Found {filtered.length} activities matching your current filters.</p>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-800 no-print">
+            <button
+              onClick={() => setViewType('grid')}
+              className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${viewType === 'grid' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              Grid
+            </button>
+            <button
+              onClick={() => setViewType('list')}
+              className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${viewType === 'list' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              List
+            </button>
+          </div>
         </div>
 
-        {loading && <p className="text-fsu-muted text-sm">Loading...</p>}
+        {loading && <p className="text-slate-400">Loading activities...</p>}
 
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-20 text-fsu-muted">
-            <p className="text-lg font-medium mb-2">No activities match your filters</p>
-            <button onClick={clearAll} className="text-fsu-garnet hover:underline text-sm">Clear all filters</button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(g => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* We can highlight the first filtered game as an "Expanded Card" if in grid view and it's highly relevant */}
+          {filtered.map((g, i) => (
             <GameCard
               key={g.id}
               game={g}
-              onViewDetail={setDetailGame}
+              isExpanded={viewType === 'grid' && i === 0 && search === '' && filterGoal.length === 0}
+              onAdd={() => console.log('Add to plan', g)}
             />
           ))}
-        </div>
-      </div>
 
-      {/* Detail modal */}
-      {detailGame && (
-        <Modal onClose={() => setDetailGame(null)}>
-          <div className="p-6 max-w-lg">
-            <h2 className="font-syne font-bold text-xl text-fsu-text mb-1">{detailGame.name}</h2>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {detailGame.goals?.map(g => <GoalTag key={g} goal={g} size="lg" />)}
+          {!loading && filtered.length === 0 && (
+            <div className="col-span-full text-center py-20 text-slate-500 bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-800">
+              <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
+              <p className="text-lg font-medium">No activities matching your current filters.</p>
+              <button onClick={clearAll} className="text-primary font-bold mt-2 hover:underline">Clear all filters</button>
             </div>
-            <div className="flex flex-wrap gap-3 text-sm text-fsu-muted mb-4">
-              <span>{detailGame.min_group}–{detailGame.max_group} people</span>
-              <span>{detailGame.time_min}–{detailGame.time_max} min</span>
-              <span className="capitalize">{detailGame.activity_level} activity</span>
-            </div>
-            {detailGame.description && <p className="text-sm text-fsu-muted mb-4 leading-relaxed">{detailGame.description}</p>}
-            {detailGame.facilitation && (
-              <div className="mb-3">
-                <p className="text-xs font-semibold text-fsu-text mb-1">Facilitation Notes</p>
-                <p className="text-sm text-fsu-muted leading-relaxed">{detailGame.facilitation}</p>
-              </div>
-            )}
-            {detailGame.materials && (
-              <div className="mb-3">
-                <p className="text-xs font-semibold text-fsu-text mb-1">Materials</p>
-                <p className="text-sm text-fsu-muted">{detailGame.materials}</p>
-              </div>
-            )}
-            {detailGame.safety_notes && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-xs font-semibold text-red-700 mb-1">Safety Notes</p>
-                <p className="text-sm text-red-600">{detailGame.safety_notes}</p>
-              </div>
-            )}
-            {detailGame.learning_objectives?.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-fsu-text mb-1">Learning Objectives</p>
-                <ul className="list-disc list-inside text-sm text-fsu-muted space-y-1">
-                  {detailGame.learning_objectives.map((o, i) => <li key={i}>{o}</li>)}
-                </ul>
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
+          )}
+        </div>
+      </section>
     </div>
   );
 }

@@ -30,51 +30,66 @@ export function AuthForm() {
   };
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-fsu-gold/30 bg-white/5 p-6 shadow-2xl backdrop-blur">
-      <h1 className="text-2xl font-semibold text-fsu-gold">FSU Facilitator Toolkit</h1>
-      <p className="mt-2 text-sm text-slate-300">Sign in to access your game library and session planner.</p>
+    <div className="w-full max-w-md rounded-xl border border-primary/20 bg-slate-900/50 p-8 shadow-2xl backdrop-blur-md">
+      <div className="flex items-center gap-3 mb-6">
+         <span className="text-3xl">🌲</span>
+         <div>
+            <h1 className="text-xl font-extrabold text-slate-100 uppercase leading-none">FSU Challenge</h1>
+            <p className="text-xs font-semibold text-accent-gold tracking-widest uppercase mt-0.5">Facilitator Toolkit</p>
+         </div>
+      </div>
 
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-        <label className="block text-sm">
-          Email
+      <p className="text-sm text-slate-400 mb-8">Sign in to access your game library and session planner.</p>
+
+      <form className="space-y-6" onSubmit={onSubmit}>
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Email Address</label>
           <input
-            className="mt-1 w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2"
+            className="w-full rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@example.com"
             required
           />
-        </label>
+        </div>
 
-        <label className="block text-sm">
-          Password
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Password</label>
           <input
-            className="mt-1 w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2"
+            className="w-full rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
             required
           />
-        </label>
+        </div>
 
         <button
-          className="w-full rounded-md bg-fsu-garnet px-3 py-2 font-medium transition hover:brightness-110 disabled:opacity-50"
+          className="w-full rounded-xl bg-primary py-4 font-bold text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           type="submit"
           disabled={loading}
         >
-          {loading ? 'Loading...' : mode === 'signin' ? 'Sign in' : 'Create account'}
+          {loading ? 'Processing...' : mode === 'signin' ? 'Sign In to Toolkit' : 'Create Account'}
         </button>
       </form>
 
-      <button
-        type="button"
-        className="mt-3 text-sm text-fsu-gold hover:underline"
-        onClick={() => setMode((current) => (current === 'signin' ? 'signup' : 'signin'))}
-      >
-        {mode === 'signin' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
-      </button>
+      <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col items-center gap-4">
+        <button
+          type="button"
+          className="text-sm font-bold text-accent-gold hover:underline"
+          onClick={() => setMode((current) => (current === 'signin' ? 'signup' : 'signin'))}
+        >
+          {mode === 'signin' ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+        </button>
+      </div>
 
-      {message && <p className="mt-3 text-sm text-slate-200">{message}</p>}
+      {message && (
+        <div className={`mt-6 p-4 rounded-lg text-sm font-medium ${message.includes('successfully') || message.includes('confirm') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+          {message}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useProfile } from '../context/ProfileContext';
 import { getSupabaseClient } from '../lib/supabase';
+import { useState } from 'react';
 
 const supabase = getSupabaseClient();
 
@@ -11,20 +12,16 @@ const ROLE_LABEL = {
 };
 
 const NAV_ITEMS = [
-  { to: '/',          label: 'Dashboard',  icon: '⊞', roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/games',     label: 'Activities', icon: '◈', roles: ['admin','lead_facilitator','assistant_facilitator'] },
-  { to: '/sessions',  label: 'Sessions',   icon: '▦', roles: ['admin','lead_facilitator'] },
-  { to: '/templates', label: 'Templates',  icon: '⬡', roles: ['admin','lead_facilitator'] },
-  { to: '/courses',   label: 'Curriculum', icon: '◧', roles: ['admin','lead_facilitator'] },
-  { to: '/groups',    label: 'Groups',     icon: '◉', roles: ['admin','lead_facilitator'] },
-  { to: '/sites',     label: 'Sites',      icon: '◎', roles: ['admin','lead_facilitator'] },
-  { to: '/analytics', label: 'Analytics',  icon: '▲', roles: ['admin','lead_facilitator'] },
-  { to: '/incidents', label: 'Incidents',  icon: '!', roles: ['admin','lead_facilitator'] },
+  { to: '/games',     label: 'Catalog',          roles: ['admin','lead_facilitator','assistant_facilitator'] },
+  { to: '/sessions',  label: 'Session Planner',  roles: ['admin','lead_facilitator'] },
+  { to: '/',          label: 'Dashboard',        roles: ['admin','lead_facilitator','assistant_facilitator'] },
 ];
 
 export default function AppShell() {
   const { profile, isAdmin } = useProfile();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -35,115 +32,114 @@ export default function AppShell() {
   const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(role));
 
   return (
-    <div className="flex h-screen overflow-hidden bg-fsu-white">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-fsu-garnet text-white">
-        {/* Logo */}
-        <div className="px-4 py-5 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-fsu-garnet bg-fsu-gold text-sm flex-shrink-0">
-              FSU
+    <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans">
+      {/* Top Navigation Bar */}
+      <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background-dark/80 backdrop-blur-md px-6 lg:px-12 py-4 no-print">
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4">
+          {/* Logo Section */}
+          <Link to="/" className="flex items-center gap-3 shrink-0">
+            <span className="text-2xl">🌲</span>
+            <div className="flex flex-col leading-tight">
+              <h1 className="text-lg font-extrabold tracking-tight text-slate-100 uppercase leading-none">FSU Challenge Course</h1>
+              <span className="text-xs font-semibold text-accent-gold tracking-widest uppercase mt-0.5">Facilitator Toolkit</span>
             </div>
-            <div>
-              <p className="font-syne font-bold text-sm text-white leading-tight">Challenge Course</p>
-              <p className="text-xs text-white/60">Facilitator Toolkit</p>
+          </Link>
+
+          {/* Main Navigation Tabs */}
+          <nav className="hidden md:flex items-center gap-1">
+            {visibleNav.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `px-5 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    isActive
+                      ? 'bg-primary/10 text-primary border border-primary/20 font-bold'
+                      : 'text-slate-400 hover:text-slate-100'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            {isAdmin && (
+               <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `px-5 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    isActive
+                      ? 'bg-primary/10 text-primary border border-primary/20 font-bold'
+                      : 'text-slate-400 hover:text-slate-100'
+                  }`
+                }
+              >
+                Admin
+              </NavLink>
+            )}
+          </nav>
+
+          {/* Action Area */}
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <button
+                onClick={() => navigate('/sessions')}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-primary/20"
+              >
+                <span className="material-symbols-outlined text-[20px]">assignment</span>
+                <span className="hidden sm:inline">Session Plan</span>
+              </button>
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="size-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center overflow-hidden focus:outline-none"
+              >
+                {profile?.avatar_url ? (
+                   <img className="w-full h-full object-cover" alt="User avatar" src={profile.avatar_url} />
+                ) : (
+                  <span className="material-symbols-outlined text-slate-100">account_circle</span>
+                )}
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-background-dark border border-primary/20 rounded-lg shadow-xl py-2 z-50">
+                  <div className="px-4 py-2 border-b border-primary/10 mb-2">
+                    <p className="text-sm font-bold truncate">{profile?.name || profile?.email}</p>
+                    <p className="text-xs text-slate-400">{ROLE_LABEL[role]}</p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-slate-100 hover:bg-primary/10 transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {visibleNav.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-fsu-garnet3 text-white'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`
-              }
-            >
-              <span className="text-base w-5 text-center">{icon}</span>
-              {label}
-            </NavLink>
-          ))}
-
-          {isAdmin && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-fsu-garnet3 text-white'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`
-              }
-            >
-              <span className="text-base w-5 text-center">⚙</span>
-              Admin
-            </NavLink>
-          )}
-        </nav>
-
-        {/* Profile footer */}
-        <div className="px-4 py-3 border-t border-white/10">
-          <p className="text-xs text-white/80 font-medium truncate mb-0.5">
-            {profile?.name || profile?.email}
-          </p>
-          {role && (
-            <span className="text-xs bg-white/15 text-white/80 px-2 py-0.5 rounded-full inline-block mb-1.5">
-              {ROLE_LABEL[role] || role}
-            </span>
-          )}
-          <br />
-          <button
-            onClick={handleSignOut}
-            className="text-xs text-white/50 hover:text-white transition-colors"
-          >
-            Sign out
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-20 bg-fsu-garnet px-4 py-3 flex items-center justify-between">
-        <span className="font-syne font-bold text-white text-sm">FSU Challenge Course</span>
-        <div className="flex items-center gap-3">
-          {role && (
-            <span className="text-xs text-white/60 bg-white/10 px-2 py-0.5 rounded-full">
-              {ROLE_LABEL[role]}
-            </span>
-          )}
-          <button onClick={handleSignOut} className="text-xs text-white/70">Sign out</button>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto md:pt-0 pt-12 pb-16 md:pb-0">
+      {/* Main Content */}
+      <main className="max-w-[1440px] mx-auto min-h-[calc(100vh-80px)]">
         <Outlet />
       </main>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-fsu-garnet border-t border-white/10 flex z-20">
-        {visibleNav.slice(0, 4).map(({ to, label, icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 text-xs gap-0.5 transition-colors ${
-                isActive ? 'text-fsu-gold' : 'text-white/60'
-              }`
-            }
-          >
-            <span className="text-base">{icon}</span>
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
+      {/* Footer */}
+      <footer className="border-t border-slate-900 bg-background-dark/50 py-12 px-6 lg:px-12 text-center text-slate-500 no-print">
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3 grayscale opacity-60">
+            <span className="text-xl">🌲</span>
+            <p className="text-xs font-bold uppercase tracking-widest">FSU Challenge Course Toolkit © 2024</p>
+          </div>
+          <div className="flex gap-8 text-xs font-bold uppercase tracking-widest">
+            <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+            <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>
+            <a className="hover:text-primary transition-colors" href="#">Contact Admin</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
