@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getSupabaseClient } from '../lib/supabase';
 import { useProfile } from '../context/ProfileContext';
 import { GoalTag } from '../components/ui/GoalTag';
+import { Modal } from '../components/ui/Modal';
 
 const supabase = getSupabaseClient();
 
