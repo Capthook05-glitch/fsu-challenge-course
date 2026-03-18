@@ -109,7 +109,7 @@ export default function AppShell() {
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-primary/10 mb-2">
-                    <p className="text-sm font-bold truncate">{profile?.name || profile?.email}</p>
+                    <p className="text-sm font-bold truncate">{profile?.username || profile?.full_name || profile?.email}</p>
                     <p className="text-xs text-slate-400">{ROLE_LABEL[role]}</p>
                   </div>
                   <Link to={`/profiles/${profile?.id}`} className="block px-4 py-2 text-sm text-slate-600 hover:bg-primary/5">My Profile</Link>

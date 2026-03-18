@@ -5,13 +5,14 @@ const ProfileContext = createContext(null);
 
 export function ProfileProvider({ session, children }) {
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
     supabase
       .from('profiles')
-      .select('id, name, role, email')
+      .select('id, username, full_name, role, email')
       .eq('id', session.user.id)
       .single()
       .then(({ data, error }) => {

@@ -42,7 +42,7 @@ export default function FacilitatorProfile() {
                 <span className="inline-block px-4 py-1.5 rounded-full bg-accent-gold/20 text-primary text-xs font-bold uppercase tracking-widest mb-4 border border-accent-gold/30">
                    {profile.role.replace('_', ' ')}
                 </span>
-                <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">{profile.name || profile.email}</h1>
+                <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">{profile.username || profile.full_name || profile.email}</h1>
                 <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl font-medium leading-relaxed">
                    {profile.bio || "Experiential education professional at Florida State University."}
                 </p>

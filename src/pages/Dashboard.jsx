@@ -111,7 +111,7 @@ export default function Dashboard() {
       {/* Page Title */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-slate-100 dark:border-slate-800 pb-8">
         <div>
-          <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.name || profile.email}</h2>
+          <h2 className="text-4xl font-extrabold tracking-tight text-navy-deep dark:text-white mb-2">Welcome back, {profile.username || profile.full_name || profile.email}</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">Tracking performance across the FSU Challenge Course program.</p>
         </div>
         <div className="flex gap-3">
