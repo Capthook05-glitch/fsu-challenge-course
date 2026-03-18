@@ -14,8 +14,16 @@ export function ProfileProvider({ session, children }) {
       .select('id, name, role, email')
       .eq('id', session.user.id)
       .single()
-      .then(({ data }) => {
-        setProfile(data);
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Error fetching profile:', error);
+        } else {
+          setProfile(data);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Unexpected error in ProfileProvider:', err);
         setLoading(false);
       });
   }, [session.user.id]);

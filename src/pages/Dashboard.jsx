@@ -21,21 +21,33 @@ export default function Dashboard() {
   }, []);
 
   async function load() {
-    const queries = [
-      supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('is_archived', false),
-      supabase.from('games').select('*', { count: 'exact', head: true }).eq('is_active', true),
-      supabase.from('sessions').select('id,name,status,updated_at')
-        .eq('is_archived', false)
-        .order('updated_at', { ascending: false })
-        .limit(5),
-    ];
-    const results = await Promise.all(queries);
-    setStats({
-      sessions: results[0].count || 0,
-      games:    results[1].count || 0,
-    });
-    setRecent(results[2].data || []);
-    setLoading(false);
+    try {
+      const queries = [
+        supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('is_archived', false),
+        supabase.from('games').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('sessions').select('id,name,status,updated_at')
+          .eq('is_archived', false)
+          .order('updated_at', { ascending: false })
+          .limit(5),
+      ];
+      const results = await Promise.all(queries);
+      
+      // Check for errors in individual results
+      results.forEach((res, i) => {
+        if (res.error) throw res.error;
+      });
+
+      setStats({
+        sessions: results[0].count || 0,
+        games:    results[1].count || 0,
+      });
+      setRecent(results[2].data || []);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      setToast({ type: 'error', message: 'Failed to load dashboard data. Check console for details.' });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function quickCreateSession() {
@@ -129,6 +141,7 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
