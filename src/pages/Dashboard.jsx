@@ -9,7 +9,7 @@ import { stripEmojis } from '../lib/utils';
 const supabase = getSupabaseClient();
 
 export default function Dashboard() {
-  const { profile, isAdmin, canPlan } = useProfile();
+  const { profile, loading: profileLoading, error: profileError } = useProfile();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ sessions: 0, games: 0, users: 0 });
   const [recent, setRecent] = useState([]);
@@ -74,7 +74,37 @@ export default function Dashboard() {
     }
   }
 
-  if (!profile || loading) return <div className="p-8 text-slate-400">Loading dashboard...</div>;
+  if (profileLoading) {
+    return (
+      <div className="flex-1 p-12 bg-background-light dark:bg-background-dark animate-pulse">
+        <div className="h-10 w-64 bg-slate-200 dark:bg-slate-800 rounded-lg mb-4"></div>
+        <div className="h-4 w-96 bg-slate-100 dark:bg-slate-900 rounded-lg mb-12"></div>
+        <div className="grid grid-cols-4 gap-8 mb-12">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-800 shadow-sm"></div>)}
+        </div>
+        <div className="h-64 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-800 shadow-sm"></div>
+      </div>
+    );
+  }
+
+  if (profileError || (!profile && !profileLoading)) {
+    return (
+      <div className="flex-1 p-12 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-center">
+        <span className="material-symbols-outlined text-6xl text-slate-300 mb-4 font-light">account_circle_off</span>
+        <h2 className="text-2xl font-bold text-navy-deep dark:text-white mb-2">Profile Not Found</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md">
+          {profileError ? 'There was an error loading your profile. Please try again or sign out.' : "We couldn't find a facilitator profile for your account. Please contact an admin to get set up."}
+        </p>
+        <div className="flex gap-4">
+          <button onClick={() => window.location.reload()} className="bg-primary text-white px-6 py-2 rounded-lg font-bold">Retry</button>
+          <button onClick={() => supabase.auth.signOut()} className="bg-white border border-slate-200 px-6 py-2 rounded-lg font-bold">Sign Out</button>
+        </div>
+      </div>
+    );
+  }
+
+  const isAdmin = profile?.role === 'admin';
+  const canPlan = isAdmin || profile?.role === 'lead_facilitator';
 
   return (
     <div className="flex-1 overflow-y-auto p-12 bg-background-light dark:bg-background-dark font-display">

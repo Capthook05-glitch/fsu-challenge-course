@@ -5,7 +5,7 @@ const ProfileContext = createContext(null);
 
 export function ProfileProvider({ session, children }) {
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -17,13 +17,16 @@ export function ProfileProvider({ session, children }) {
       .then(({ data, error }) => {
         if (error) {
           console.error('Error fetching profile:', error);
+          setError(error);
         } else {
           setProfile(data);
+          setError(null);
         }
         setLoading(false);
       })
       .catch(err => {
         console.error('Unexpected error in ProfileProvider:', err);
+        setError(err);
         setLoading(false);
       });
   }, [session.user.id]);
@@ -34,6 +37,7 @@ export function ProfileProvider({ session, children }) {
     <ProfileContext.Provider value={{
       profile,
       loading,
+      error,
       isAdmin:                role === 'admin',
       isLeadFacilitator:      role === 'lead_facilitator',
       isAssistantFacilitator: role === 'assistant_facilitator',
