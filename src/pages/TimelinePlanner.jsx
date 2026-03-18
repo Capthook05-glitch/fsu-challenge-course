@@ -8,6 +8,7 @@ import { stripEmojis } from '../lib/utils';
 import { TimelineBlock } from '../components/timeline/TimelineBlock';
 import { BlockEditor } from '../components/timeline/BlockEditor';
 import { GoalTag } from '../components/ui/GoalTag';
+import { GameEditor, BLANK_GAME } from '../components/admin/GameEditor';
 
 const supabase = getSupabaseClient();
 
@@ -35,6 +36,7 @@ export default function TimelinePlanner() {
   const [sites, setSites]             = useState([]);
   const [groups, setGroups]           = useState([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGameEditor, setShowGameEditor] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -424,11 +426,15 @@ export default function TimelinePlanner() {
                     </button>
                  ))}
               </div>
-              {/* Simple Game Picker within this modal for now */}
-              <input value={gameSearch} onChange={e => setGameSearch(e.target.value)}
-                placeholder="Search games..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white mb-4" />
-              <div className="max-h-60 overflow-y-auto space-y-2">
+               <div className="flex justify-between items-center mb-4">
+                 <input value={gameSearch} onChange={e => setGameSearch(e.target.value)}
+                   placeholder="Search games..."
+                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white mr-3" />
+                 <button onClick={() => setShowGameEditor(true)} className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap">
+                   + Create Game
+                 </button>
+               </div>
+               <div className="max-h-60 overflow-y-auto space-y-2">
                  {allGames.filter(g => !gameSearch || g.name.toLowerCase().includes(gameSearch.toLowerCase())).slice(0, 10).map(g => (
                     <button key={g.id} onClick={() => addBlock('activity', g.id, g)}
                        className="w-full text-left p-3 rounded-lg bg-slate-800/50 hover:bg-primary/10 border border-slate-700 text-sm text-slate-200">
@@ -438,6 +444,19 @@ export default function TimelinePlanner() {
               </div>
            </div>
         </div>
+      )}
+
+      {/* Game Editor Modal */}
+      {showGameEditor && (
+        <GameEditor
+           game={BLANK_GAME}
+           onClose={() => setShowGameEditor(false)}
+           onSave={(savedGame) => {
+              addBlock('activity', savedGame.id, savedGame);
+              setShowGameEditor(false);
+              supabase.from('games').select('*').eq('is_active', true).order('name').then(({data}) => setAllGames(data||[]));
+           }}
+        />
       )}
     </div>
   );

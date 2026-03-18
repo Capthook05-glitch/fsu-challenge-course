@@ -24,8 +24,14 @@ export default function SessionScript() {
 
   if (loading) return <div className="p-10 text-slate-400">Loading script...</div>;
 
+  const formatTime = (totalMin) => {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h > 0 ? h + 'h ' : ''}${m}m`;
+  };
+
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full flex flex-col lg:flex-row bg-white dark:bg-background-dark min-h-screen">
+    <div className="flex-1 max-w-7xl mx-auto w-full flex flex-col lg:flex-row bg-white dark:bg-background-dark min-h-screen print:bg-white print:text-black">
        {/* Sidebar Navigation: Document Structure */}
        <aside className="hidden lg:flex w-72 flex-col border-r border-slate-200 dark:border-slate-800 p-6 sticky top-[73px] h-[calc(100vh-73px)] no-print">
           <div className="mb-8">
@@ -57,12 +63,19 @@ export default function SessionScript() {
              </p>
           </div>
 
-          <div className="space-y-20">
+          <div className="space-y-16 print:space-y-8">
              {blocks.map((b, i) => (
-                <section key={b.id} id={`block-${b.id}`} className="scroll-mt-24">
-                   <div className="flex items-center gap-4 mb-6">
-                      <span className="text-4xl font-black text-primary/10">0{i+1}</span>
-                      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">{stripEmojis(b.title || b.game?.name || 'Activity')}</h2>
+                <section key={b.id} id={`block-${b.id}`} className="scroll-mt-24 print:break-inside-avoid print:border-b print:border-slate-300 print:pb-8">
+                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                      <div className="flex items-center gap-4">
+                         <span className="text-4xl font-black text-primary/10 print:hidden">0{i+1}</span>
+                         <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white print:text-black print:text-2xl">{stripEmojis(b.title || b.game?.name || 'Activity')}</h2>
+                      </div>
+                      <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 print:bg-transparent px-4 py-2 rounded-lg font-bold text-navy-600 print:text-black shrink-0 border border-slate-200 print:border-slate-400">
+                         <span>Start: {formatTime(b.start_time || 0)}</span>
+                         <span className="w-px h-4 bg-slate-300"></span>
+                         <span>{b.duration_min} min</span>
+                      </div>
                    </div>
 
                    <div className="grid md:grid-cols-2 gap-10">
@@ -79,28 +92,28 @@ export default function SessionScript() {
                          )}
                       </div>
                       <div className="space-y-6">
-                         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                               <span className="material-symbols-outlined text-sm">gpp_maybe</span>
+                         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 print:bg-transparent print:border-slate-300 print:p-4">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2 print:text-black">
+                               <span className="material-symbols-outlined text-sm print:hidden">gpp_maybe</span>
                                Safety Checklist
                             </h3>
-                            <ul className="text-sm space-y-3 text-slate-600 dark:text-slate-400">
+                            <ul className="text-sm space-y-3 text-slate-600 dark:text-slate-400 print:text-black">
                                <li className="flex items-start gap-2">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-accent-gold mt-1.5 shrink-0"></span>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-accent-gold mt-1.5 shrink-0 print:bg-black"></span>
                                   Check environment for hazards.
                                </li>
                                {b.game?.safety_notes && (
                                   <li className="flex items-start gap-2">
-                                     <span className="w-1.5 h-1.5 rounded-full bg-accent-gold mt-1.5 shrink-0"></span>
+                                     <span className="w-1.5 h-1.5 rounded-full bg-accent-gold mt-1.5 shrink-0 print:bg-black"></span>
                                      {b.game.safety_notes}
                                   </li>
                                )}
                             </ul>
                          </div>
                          {b.game?.materials && (
-                            <div className="p-6 bg-primary/5 rounded-xl border border-primary/10">
-                               <h3 className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Required Gear</h3>
-                               <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{b.game.materials}</p>
+                            <div className="p-6 bg-primary/5 rounded-xl border border-primary/10 print:bg-transparent print:border-slate-300 print:p-4">
+                               <h3 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 print:text-black">Required Gear</h3>
+                               <p className="text-sm font-bold text-slate-700 dark:text-slate-200 print:text-black">{b.game.materials}</p>
                             </div>
                          )}
                       </div>

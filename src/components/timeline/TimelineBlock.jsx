@@ -16,13 +16,34 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
 
   const title = game?.name || block.title || block.block_type || 'Block';
 
+  const typeColors = {
+    activity: 'border-l-blue-500 bg-blue-50/10',
+    debrief: 'border-l-emerald-500 bg-emerald-50/10',
+    break: 'border-l-amber-500 bg-amber-50/10',
+    custom: 'border-l-purple-500 bg-purple-50/10'
+  };
+  const typeColor = typeColors[block.block_type] || 'border-l-slate-400 bg-white';
+
+  const formatTime = (totalMin) => {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h > 0 ? h + 'h ' : ''}${m}m`;
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative flex flex-col md:flex-row md:items-center gap-4 bg-white border border-slate-200 p-5 rounded-lg hover:border-primary/40 hover:shadow-md transition-all"
+      className={`group relative flex flex-col md:flex-row md:items-stretch bg-white border-y border-r border-l-8 border-slate-200 ${typeColor} rounded-lg hover:shadow-md transition-all overflow-hidden`}
     >
-      <div className="flex items-center gap-3 shrink-0">
+      {/* SessionLab-style Time Gutter */}
+      <div className="w-24 shrink-0 bg-slate-50/50 border-r border-slate-100 flex flex-col items-center justify-center py-4 text-center">
+         <span className="text-sm font-bold text-navy-900">{formatTime(block.start_time || 0)}</span>
+         <span className="text-[10px] font-black uppercase text-slate-400 mt-1">{block.duration_min} min</span>
+      </div>
+
+      <div className="flex-1 p-4 flex flex-col md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3 shrink-0">
         {!readOnly && (
            <div {...attributes} {...listeners} className="cursor-grab text-slate-300 group-hover:text-slate-500 transition-colors">
               <span className="material-symbols-outlined">drag_indicator</span>
@@ -70,7 +91,7 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
         </div>
 
         {(block.notes || game?.description) && (
-          <div className="mt-3 p-3 bg-slate-50 rounded border-l-4 border-primary/40">
+          <div className="mt-3 p-3 bg-white rounded border-l-4 border-slate-200">
             <p className="text-navy-600 text-xs italic font-medium">
                Notes: {block.notes || game?.description}
             </p>
@@ -78,7 +99,7 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
         )}
       </div>
 
-      <div className="flex md:flex-col items-center gap-1 shrink-0 self-end md:self-center">
+      <div className="flex flex-row md:flex-col items-center gap-1 shrink-0 self-end md:self-center">
         {!readOnly && (
           <button
             onClick={() => onEdit(block)}
@@ -95,8 +116,10 @@ export function TimelineBlock({ block, game, onEdit, readOnly = false, index }) 
         </button>
       </div>
 
+      </div>
+
       {showComments && (
-        <div className="w-full md:pl-16">
+        <div className="w-full pl-4 md:pl-[120px] pb-4">
            <BlockComments blockId={block.id} sessionId={block.session_id} />
         </div>
       )}
