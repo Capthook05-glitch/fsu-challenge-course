@@ -4,24 +4,8 @@
 
 -- A. Drop whatever check constraint exists on profiles.role (name may vary),
 --    then add a new named one with the three allowed roles.
-DO $$
-DECLARE
-  v_constraint text;
-BEGIN
-  SELECT conname INTO v_constraint
-  FROM pg_constraint pc
-  JOIN pg_class pt ON pt.oid = pc.conrelid
-  JOIN pg_namespace pn ON pn.oid = pt.relnamespace
-  WHERE pn.nspname = 'public'
-    AND pt.relname  = 'profiles'
-    AND pc.contype  = 'c'
-    AND pg_get_constraintdef(pc.oid) ILIKE '%admin%';
-
-  IF v_constraint IS NOT NULL THEN
-    EXECUTE 'ALTER TABLE public.profiles DROP CONSTRAINT ' || quote_ident(v_constraint);
-  END IF;
-END;
-$$;
+-- Explicitly drop the constraint if it exists, without CASCADE
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 
 ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_role_check
